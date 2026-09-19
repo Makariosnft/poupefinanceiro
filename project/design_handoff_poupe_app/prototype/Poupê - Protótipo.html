@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Poupê — Protótipo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;height:100%;background:#e9e3d6;font-family:'Montserrat',sans-serif;color:#1a1815;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+#root{height:100%;display:flex;align-items:center;justify-content:center;overflow:auto}
+[data-dev-note]{display:none !important}
+</style>
+</head>
+<body>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<div id="root"></div>
+
+<script type="text/babel" src="wireframes.jsx"></script>
+<script type="text/babel" src="features-extra.jsx"></script>
+<script type="text/babel" src="goals.jsx"></script>
+<script type="text/babel" src="extra2.jsx"></script>
+<script type="text/babel" src="onboarding.jsx"></script>
+
+<script type="text/babel">
+const ink = '#1a1815', ink2 = '#4a463f', muted = '#8a857a', paper = '#fbf8f1', paper2 = '#f3eee2', green = '#2f5a48', blue = '#3a6a8a';
+
+function RelatoriosPlaceholder({ onNavigate }) {
+  return (
+    <div style={{ height: '100%', background: paper, fontFamily: 'Montserrat, sans-serif', color: ink, overflow: 'hidden' }}>
+      <window.TopBar activeTab="Relatórios" onNavigate={onNavigate} />
+      <div style={{ padding: 40, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: 'calc(100% - 96px)', textAlign: 'center', gap: 10 }}>
+        <div style={{ fontSize: 40 }}>📊</div>
+        <div style={{ fontWeight: 700, fontSize: 20 }}>Relatórios completos — em construção</div>
+        <div style={{ fontSize: 13, color: muted, maxWidth: 380 }}>Essa aba vai reunir os relatórios por categoria, tipo e pessoa que já aparecem espalhados nas outras telas.</div>
+      </div>
+    </div>
+  );
+}
+
+const TAB_COMPONENTS = {
+  'Lançamentos': window.VarDashboard,
+  'Gastos do mês': window.VarGastosDoMes,
+  'Fixos': window.VarSheet,
+  'Parcelamentos': window.VarParcelamentos,
+  'Diagnóstico': window.VarDiagnostico,
+  'Dívidas': window.VarDividas,
+  'Metas': window.VarMetas,
+  'Relatórios': RelatoriosPlaceholder,
+};
+
+const ONB_STEPS = [
+  ({ onNext }) => <window.OnbWelcome onNext={onNext} />,
+  ({ onNext, onBack }) => <window.OnbPeople onNext={onNext} onBack={onBack} />,
+  ({ onNext, onBack }) => <window.OnbCategories onNext={onNext} onBack={onBack} />,
+  ({ onNext, onBack }) => <window.OnbPaymentTypes onNext={onNext} onBack={onBack} />,
+  ({ onNext, onBack }) => <window.OnbDone onNext={onNext} onBack={onBack} />,
+];
+
+function QuickAddModal({ onClose }) {
+  const [kind, setKind] = React.useState('Comum');
+  return (
+    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 40 }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: paper, border: `1.5px solid ${ink}`, borderRadius: 10, padding: 22, width: 420, boxShadow: '0 20px 50px rgba(0,0,0,0.25)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontWeight: 700, letterSpacing: '-0.01em', fontSize: 24 }}>Novo lançamento</div>
+          <span onClick={onClose} style={{ color: muted, fontSize: 16, cursor: 'pointer' }}>✕</span>
+        </div>
+        <div style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 11, color: muted, marginBottom: 6 }}>tipo de gasto</div>
+          <window.KindSwitch active={kind} size="md" onSelect={setKind} />
+        </div>
+        <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div>
+            <div style={{ fontSize: 11, color: muted, marginBottom: 4 }}>descrição</div>
+            <div style={{ border: `1.5px dashed ${ink2}`, borderRadius: 6, padding: '8px 10px', color: muted, fontWeight: 700, letterSpacing: '-0.01em', fontSize: 16 }}>
+              {kind === 'Parcelamento' ? 'iPhone 15' : kind === 'Fixo' ? 'Aluguel' : 'Mercado mês'}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <div style={{ fontSize: 11, color: muted, marginBottom: 4 }}>{kind === 'Parcelamento' ? 'valor da parcela' : 'valor'}</div>
+              <div style={{ border: `1.5px solid ${ink}`, borderRadius: 6, padding: '8px 10px', fontWeight: 700, letterSpacing: '-0.01em', fontSize: 20 }}>R$ {kind === 'Parcelamento' ? '320,00' : kind === 'Fixo' ? '1.800,00' : '642,30'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: muted, marginBottom: 4 }}>{kind === 'Fixo' ? 'dia do mês' : kind === 'Parcelamento' ? 'total de parcelas' : 'data'}</div>
+              <div style={{ border: `1.5px dashed ${ink2}`, borderRadius: 6, padding: '8px 10px', color: muted, fontWeight: 600, fontSize: 15 }}>{kind === 'Fixo' ? 'dia 05' : kind === 'Parcelamento' ? '12x' : 'hoje · 23 ago'}</div>
+            </div>
+          </div>
+          {kind === 'Parcelamento' && (
+            <div style={{ padding: '10px 12px', border: `1.6px solid ${green}`, borderRadius: 8, background: `${green}10` }}>
+              <div style={{ fontSize: 11, color: green, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: 6 }}>qual parcela está pagando agora?</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ flex: 1, border: `1.5px solid ${green}`, borderRadius: 6, padding: '8px 10px', background: paper, fontWeight: 700, fontSize: 18, textAlign: 'center' }}>6</div>
+                <span style={{ color: ink2, fontWeight: 600 }}>de</span>
+                <div style={{ flex: 1, border: `1.4px dashed ${ink2}`, borderRadius: 6, padding: '8px 10px', color: muted, fontWeight: 600, fontSize: 18, textAlign: 'center' }}>12</div>
+              </div>
+            </div>
+          )}
+          <div>
+            <div style={{ fontSize: 11, color: muted, marginBottom: 4 }}>quem</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <span style={{ flex: 1, padding: '6px 0', textAlign: 'center', border: `1.5px solid ${ink}`, borderRadius: 6, background: ink, color: paper, fontWeight: 700, fontSize: 14 }}>Davi</span>
+              <span style={{ flex: 1, padding: '6px 0', textAlign: 'center', border: `1.4px dashed ${ink2}`, borderRadius: 6, fontWeight: 700, fontSize: 14, color: muted }}>Eduarda</span>
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 20 }}>
+          <span onClick={onClose} style={{ background: ink, color: paper, padding: '9px 20px', borderRadius: 6, fontWeight: 700, letterSpacing: '-0.01em', fontSize: 15, cursor: 'pointer' }}>salvar</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function App() {
+  const [stage, setStage] = React.useState('login'); // login | onboarding | app
+  const [onbStep, setOnbStep] = React.useState(0);
+  const [activeTab, setActiveTab] = React.useState('Lançamentos');
+  const [modalOpen, setModalOpen] = React.useState(false);
+
+  const restart = () => { setStage('login'); setOnbStep(0); setActiveTab('Lançamentos'); setModalOpen(false); };
+
+  const W = 1300, H = 760;
+  const frameStyle = { width: 'min(1300px, 96vw)', height: 'min(760px, 90vh)', borderRadius: 10, overflow: 'hidden', border: `1.5px solid ${ink}`, background: paper, boxShadow: '0 20px 60px rgba(0,0,0,0.18)', position: 'relative', flexShrink: 0 };
+
+  let content;
+  if (stage === 'login') {
+    content = <div style={frameStyle}><window.VarLogin onLogin={() => setStage('onboarding')} /></div>;
+  } else if (stage === 'onboarding') {
+    const StepComp = ONB_STEPS[onbStep];
+    content = (
+      <div style={frameStyle}>
+        <StepComp
+          onNext={() => onbStep < ONB_STEPS.length - 1 ? setOnbStep(onbStep + 1) : setStage('app')}
+          onBack={() => onbStep > 0 ? setOnbStep(onbStep - 1) : setStage('login')}
+        />
+      </div>
+    );
+  } else {
+    const Screen = TAB_COMPONENTS[activeTab] || TAB_COMPONENTS['Lançamentos'];
+    content = (
+      <div style={frameStyle}>
+        <Screen onNavigate={setActiveTab} onOpenModal={() => setModalOpen(true)} />
+        {modalOpen && <QuickAddModal onClose={() => setModalOpen(false)} />}
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div style={{ position: 'fixed', top: 14, right: 18, zIndex: 100, display: 'flex', alignItems: 'center', gap: 10 }}>
+        <span onClick={restart} style={{ fontSize: 12, color: ink2, background: paper, border: `1.3px solid ${ink2}55`, borderRadius: 99, padding: '6px 12px', cursor: 'pointer' }}>↺ reiniciar protótipo</span>
+      </div>
+      {content}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
