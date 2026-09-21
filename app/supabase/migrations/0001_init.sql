@@ -69,7 +69,7 @@ create table transactions (
   id uuid primary key default gen_random_uuid(),
   account_id uuid not null references accounts(id) on delete cascade,
   kind text not null check (kind in ('comum', 'fixo', 'parcelamento', 'entrada')),
-  desc text not null,
+  description text not null,
   amount numeric not null,
   category_id uuid references categories(id) on delete set null,
   type_id uuid references payment_types(id) on delete set null,

@@ -7,7 +7,7 @@ export const PEOPLE_MAP = { name: 'name', color: 'color' } as const;
 export const CATEGORIES_MAP = { name: 'name', color: 'color' } as const;
 export const PAYMENT_TYPES_MAP = { name: 'name', kind: 'kind', color: 'color', closing: 'closing', due: 'due' } as const;
 export const TX_MAP = {
-  kind: 'kind', desc: 'desc', amount: 'amount', categoryId: 'category_id', typeId: 'type_id',
+  kind: 'kind', desc: 'description', amount: 'amount', categoryId: 'category_id', typeId: 'type_id',
   personId: 'person_id', date: 'date', dayOfMonth: 'day_of_month', paidMonths: 'paid_months',
   startMonth: 'start_month', totalInstallments: 'total_installments', incomeKind: 'income_kind',
 } as const;
