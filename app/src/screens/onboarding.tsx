@@ -491,8 +491,19 @@ export function PaymentTypesFields() {
                   </div>
                   <span onClick={() => actions.delPaymentType(c.id)} style={{ fontSize: 15, opacity: 0.7, cursor: 'pointer', flexShrink: 0 }}>×</span>
                 </div>
-                <div style={{ display: 'flex', gap: 14, marginTop: 12, fontSize: 10.5, opacity: 0.85, position: 'relative' }}>
-                  <span>fecha dia <b>{c.closing}</b></span><span>vence dia <b>{c.due}</b></span>
+                <div style={{ display: 'flex', gap: 10, marginTop: 12, fontSize: 10.5, opacity: 0.92, position: 'relative', alignItems: 'center' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    fecha dia
+                    <input type="number" min={1} max={31} value={c.closing ?? ''}
+                      onChange={e => actions.updatePaymentType(c.id, { closing: Number(e.target.value) || undefined })}
+                      style={{ width: 34, padding: '2px 4px', borderRadius: 5, border: 'none', background: 'rgba(255,255,255,.85)', color: ink, fontWeight: 700, fontSize: 10.5 }} />
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    vence dia
+                    <input type="number" min={1} max={31} value={c.due ?? ''}
+                      onChange={e => actions.updatePaymentType(c.id, { due: Number(e.target.value) || undefined })}
+                      style={{ width: 34, padding: '2px 4px', borderRadius: 5, border: 'none', background: 'rgba(255,255,255,.85)', color: ink, fontWeight: 700, fontSize: 10.5 }} />
+                  </label>
                 </div>
               </div>
             ))}
@@ -517,10 +528,10 @@ export function PaymentTypesFields() {
 
           {presetsLeft.length > 0 && (
             <div style={{ marginTop: 13 }}>
-              <div style={{ fontSize: 10.5, color: muted, marginBottom: 6 }}>sugestões — clique para adicionar</div>
+              <div style={{ fontSize: 10.5, color: muted, marginBottom: 6 }}>sugestões — clique pra preencher o nome e a cor, depois ajuste as datas e confirme abaixo</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {presetsLeft.map(p => (
-                  <span key={p.name} onClick={() => addCard(p.name, p.color)}
+                  <span key={p.name} onClick={() => { setCardName(p.name); setCardColor(p.color); }}
                     style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 10px', border: `1.3px dashed ${ink2}55`, borderRadius: 99, fontSize: 11.5, color: ink2, cursor: 'pointer', transition: 'all .15s' }}>
                     <span style={{ width: 11, height: 11, borderRadius: 3, background: p.color }} />{p.name}
                     <span style={{ color: green, fontWeight: 800, fontSize: 12 }}>+</span>

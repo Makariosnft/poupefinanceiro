@@ -167,6 +167,7 @@ function buildActions(
     addCategory: (name: string, color: string) => { categories.add({ name, color }); toast(`Categoria "${name}" criada`); },
     delCategory: (id: string) => categories.remove(id),
     addPaymentType: (t: Omit<PaymentType, 'id'>) => { paymentTypes.add(t); toast(`${t.name} adicionado`); },
+    updatePaymentType: (id: string, patch: Partial<PaymentType>) => paymentTypes.update(id, patch),
     delPaymentType: (id: string) => paymentTypes.remove(id),
     addPerson: (name: string, color: string) => { people.add({ name, color }); toast(`${name} adicionado(a)`); },
     delPerson: (id: string) => people.remove(id),
