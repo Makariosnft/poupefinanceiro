@@ -223,7 +223,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const uiPrefs = React.useMemo(loadUiPrefs, []);
   const [ui, setUi] = React.useState<AppState['ui']>({
     month: uiPrefs.month, personId: uiPrefs.personId, activeGoalId: null,
-    authed: false, authLoading: true, accountId: null, accountLoading: false,
+    authed: false, authLoading: true, accountId: null, accountChecked: false,
   });
   const [account, setAccount] = React.useState<Account | null>(null);
   const [people, setPeople] = React.useState<Person[]>([]);
@@ -263,7 +263,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       setUi(u => ({ ...u, authed: !!session, authLoading: false }));
       if (!session) {
-        setUi(u => ({ ...u, accountId: null }));
+        setUi(u => ({ ...u, accountId: null, accountChecked: false }));
         setAccount(null);
         setPeople([]); setCategories([]); setPaymentTypes([]); setTransactions([]); setDebts([]); setGoals([]);
       }
@@ -273,18 +273,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   // Descobrir a conta (casal) do usuário logado
   React.useEffect(() => {
-    if (!ui.authed || ui.accountId) return;
+    if (!ui.authed || ui.accountId || ui.accountChecked) return;
     let cancelled = false;
-    setUi(u => ({ ...u, accountLoading: true }));
     (async () => {
       const { data: accountId, error } = await supabase.rpc('my_account_id');
       if (cancelled) return;
-      if (error) { console.error(error); toast('Não deu pra carregar sua conta. Recarregue a página.', 'error'); setUi(u => ({ ...u, accountLoading: false })); return; }
-      if (accountId) setUi(u => ({ ...u, accountId: accountId as string, accountLoading: false }));
-      else setUi(u => ({ ...u, accountLoading: false }));
+      if (error) { console.error(error); toast('Não deu pra carregar sua conta. Recarregue a página.', 'error'); setUi(u => ({ ...u, accountChecked: true })); return; }
+      setUi(u => ({ ...u, accountId: (accountId as string) || null, accountChecked: true }));
     })();
     return () => { cancelled = true; };
-  }, [ui.authed, ui.accountId]);
+  }, [ui.authed, ui.accountId, ui.accountChecked]);
 
   // Carregar dados da conta + assinar mudanças em tempo real
   React.useEffect(() => {

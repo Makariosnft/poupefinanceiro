@@ -68,7 +68,7 @@ export interface UIState {
   authed: boolean;
   authLoading: boolean;
   accountId: string | null;
-  accountLoading: boolean;
+  accountChecked: boolean; // true once we've determined accountId (found or not) for the current session
 }
 
 export interface Account {

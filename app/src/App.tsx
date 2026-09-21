@@ -43,18 +43,18 @@ function AppShell() {
   // Later transitions are all explicit (see the screens below), so creating
   // an account mid-flow doesn't jump straight past the invite-code/wizard steps.
   React.useEffect(() => {
-    if (initialized.current || state.ui.authLoading || !state.ui.authed || state.ui.accountLoading) return;
+    if (initialized.current || state.ui.authLoading || !state.ui.authed || !state.ui.accountChecked) return;
     initialized.current = true;
     setScreen(state.ui.accountId ? 'app' : 'choice');
-  }, [state.ui.authLoading, state.ui.authed, state.ui.accountLoading, state.ui.accountId]);
+  }, [state.ui.authLoading, state.ui.authed, state.ui.accountChecked, state.ui.accountId]);
 
   React.useEffect(() => {
-    if (!state.ui.authed) initialized.current = false;
+    if (!state.ui.authed) { initialized.current = false; setScreen(null); }
   }, [state.ui.authed]);
 
   if (state.ui.authLoading) return <Splash />;
   if (!state.ui.authed) return <Login />;
-  if (state.ui.accountLoading || screen === null) return <Splash />;
+  if (!state.ui.accountChecked || screen === null) return <Splash />;
 
   if (screen === 'choice') {
     return <AccountChoice onCreate={() => setScreen('create')} onJoin={() => setScreen('join')} />;
