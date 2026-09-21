@@ -14,32 +14,20 @@ const BANK_PRESETS = [
 ];
 
 // ── Login ──────────────────────────────────────────────────────────
-export function Login({ onLogin }: { onLogin: () => void }) {
-  const [email, setEmail] = React.useState('davi@email.com');
-  const [pass, setPass] = React.useState('••••••••');
+export function Login() {
+  const { actions } = useStore();
+  const [email, setEmail] = React.useState('');
+  const [pass, setPass] = React.useState('');
   const [mode, setMode] = React.useState<'entrar' | 'criar'>('entrar');
-  const [loading, setLoading] = React.useState<string | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
-  const go = (via: string) => {
-    setLoading(via);
-    setTimeout(() => { setLoading(null); onLogin(); }, via === 'email' ? 450 : 700);
+  const go = async () => {
+    if (!email.trim() || !pass) return;
+    setLoading(true);
+    if (mode === 'entrar') await actions.signIn(email.trim(), pass);
+    else await actions.signUp(email.trim(), pass);
+    setLoading(false);
   };
-
-  const Social = ({ icon, label, id }: { icon: string; label: string; id: string }) => (
-    <button type="button" onClick={() => go(id)} disabled={!!loading}
-      style={{
-        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-        padding: '11px 12px', border: `1.4px solid ${ink2}55`, borderRadius: 9, background: paper,
-        fontSize: 13, fontWeight: 600, color: ink, cursor: loading ? 'wait' : 'pointer',
-        fontFamily: 'Montserrat, sans-serif', transition: 'border-color .15s, background .15s, transform .12s',
-        opacity: loading && loading !== id ? 0.5 : 1, whiteSpace: 'nowrap',
-      }}
-      onMouseEnter={e => { if (!loading) { e.currentTarget.style.borderColor = ink; e.currentTarget.style.transform = 'translateY(-1px)'; } }}
-      onMouseLeave={e => { e.currentTarget.style.borderColor = `${ink2}55`; e.currentTarget.style.transform = 'translateY(0)'; }}>
-      <span style={{ fontSize: 15, fontWeight: 800 }}>{icon}</span>
-      {loading === id ? 'entrando…' : label}
-    </button>
-  );
 
   return (
     <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', fontFamily: 'Montserrat, sans-serif', overflow: 'hidden' }}>
@@ -69,32 +57,19 @@ export function Login({ onLogin }: { onLogin: () => void }) {
             {mode === 'entrar' ? 'Entre para continuar organizando suas finanças' : 'Comece grátis — leva menos de um minuto'}
           </div>
 
-          <div style={{ display: 'flex', gap: 8, marginTop: 22 }}>
-            <Social icon="G" label="Google" id="google" />
-            <Social icon="" label="Apple" id="apple" />
-          </div>
-          <div style={{ marginTop: 8 }}><Social icon="⊞" label="Continuar com Microsoft" id="ms" /></div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0' }}>
-            <div style={{ flex: 1, height: 1, background: `${ink2}2e` }} />
-            <span style={{ fontSize: 10.5, color: muted, letterSpacing: '0.07em', textTransform: 'uppercase' }}>ou com e-mail</span>
-            <div style={{ flex: 1, height: 1, background: `${ink2}2e` }} />
-          </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <Field label="e-mail"><Input type="email" value={email} onChange={setEmail} placeholder="voce@email.com" onEnter={() => go('email')} /></Field>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 22 }}>
+            <Field label="e-mail"><Input type="email" value={email} onChange={setEmail} placeholder="voce@email.com" onEnter={go} /></Field>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
                 <span style={{ fontSize: 10.5, color: muted, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>senha</span>
-                <span style={{ fontSize: 11, color: blue, cursor: 'pointer' }}>esqueci a senha</span>
               </div>
-              <Input type="password" value={pass} onChange={setPass} onEnter={() => go('email')} />
+              <Input type="password" value={pass} onChange={setPass} onEnter={go} />
             </div>
           </div>
 
           <div style={{ marginTop: 18 }}>
-            <Button full size="lg" onClick={() => go('email')} disabled={!!loading}>
-              {loading === 'email' ? 'entrando…' : mode === 'entrar' ? 'Entrar →' : 'Criar conta →'}
+            <Button full size="lg" onClick={go} disabled={loading || !email.trim() || !pass}>
+              {loading ? 'entrando…' : mode === 'entrar' ? 'Entrar →' : 'Criar conta →'}
             </Button>
           </div>
 
@@ -173,34 +148,113 @@ export interface OnbStepProps {
   onSkip?: () => void;
 }
 
-// ── Passo 0: boas-vindas ───────────────────────────────────────────
-export function Welcome({ onNext }: OnbStepProps) {
+// ── Conta (casal): criar do zero ou entrar com código de convite ────
+function AccountFrame({ children }: { children: React.ReactNode }) {
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, fontFamily: 'Montserrat, sans-serif', overflow: 'auto' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 20, padding: '40px 28px' }}>
         <img src={logo} alt="Poupê" style={{ height: 74, width: 'auto', objectFit: 'contain', display: 'block' }} />
-        <div style={{ fontSize: 11.5, color: blue, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Boas-vindas</div>
-        <div style={{ fontWeight: 800, letterSpacing: '-0.032em', fontSize: 48, lineHeight: 1.03, maxWidth: 700 }}>
-          Vamos organizar suas <span style={{ color: green }}>finanças</span> juntos.
-        </div>
-        <div style={{ fontSize: 15.5, color: ink2, maxWidth: 520, lineHeight: 1.55 }}>
-          Em 4 passos rápidos a gente personaliza o app para <b>como você gasta</b> — sem categorias genéricas, sem forma de pagamento que você não usa.
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 10, maxWidth: 660, width: '100%' }}>
-          {([['👥', 'Quem usa', 'Sozinho, casal ou família'], ['🏷️', 'Suas categorias', 'Edite e crie as suas'], ['💳', 'Seus pagamentos', 'PIX, cartões, boletos…']] as const).map(([e, t, s]) => (
-            <div key={t} style={{ padding: '15px 13px', border: `1.4px solid ${ink2}33`, borderRadius: 11, background: paper, textAlign: 'left' }}>
-              <div style={{ fontSize: 21, marginBottom: 6 }}>{e}</div>
-              <div style={{ fontWeight: 700, fontSize: 13, letterSpacing: '-0.005em' }}>{t}</div>
-              <div style={{ fontSize: 11.5, color: muted, marginTop: 3 }}>{s}</div>
-            </div>
-          ))}
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginTop: 8 }}>
-          <Button size="lg" onClick={onNext}>Começar →</Button>
-          <span style={{ fontSize: 11.5, color: muted }}>leva uns 2 minutos · você pode mudar tudo depois</span>
-        </div>
+        {children}
       </div>
     </div>
+  );
+}
+
+export function AccountChoice({ onCreate, onJoin }: { onCreate: () => void; onJoin: () => void }) {
+  return (
+    <AccountFrame>
+      <div style={{ fontSize: 11.5, color: blue, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Boas-vindas</div>
+      <div style={{ fontWeight: 800, letterSpacing: '-0.032em', fontSize: 48, lineHeight: 1.03, maxWidth: 700 }}>
+        Vamos organizar suas <span style={{ color: green }}>finanças</span> juntos.
+      </div>
+      <div style={{ fontSize: 15.5, color: ink2, maxWidth: 520, lineHeight: 1.55 }}>
+        O Poupê é feito pra duas pessoas dividirem a mesma vida financeira. Comece uma conta nova, ou entre com o código que a outra pessoa te mandou.
+      </div>
+      <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div onClick={onCreate} style={{ cursor: 'pointer', width: 260, padding: '20px 18px', border: `1.6px solid ${ink}`, borderRadius: 13, background: paper, textAlign: 'left' }}>
+          <div style={{ fontSize: 26, marginBottom: 8 }}>🏡</div>
+          <div style={{ fontWeight: 800, fontSize: 15.5 }}>Criar uma conta nova</div>
+          <div style={{ fontSize: 12, color: muted, marginTop: 5, lineHeight: 1.45 }}>Você é o primeiro a entrar. Depois convida a outra pessoa com um código.</div>
+        </div>
+        <div onClick={onJoin} style={{ cursor: 'pointer', width: 260, padding: '20px 18px', border: `1.6px dashed ${ink2}`, borderRadius: 13, background: paper, textAlign: 'left' }}>
+          <div style={{ fontSize: 26, marginBottom: 8 }}>🔑</div>
+          <div style={{ fontWeight: 800, fontSize: 15.5 }}>Entrar com um código</div>
+          <div style={{ fontSize: 12, color: muted, marginTop: 5, lineHeight: 1.45 }}>Alguém já criou a conta e te passou um código de convite.</div>
+        </div>
+      </div>
+    </AccountFrame>
+  );
+}
+
+export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
+  const { state, actions } = useStore();
+  const [name, setName] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const [code, setCode] = React.useState<string | null>(null);
+
+  const create = async () => {
+    if (!name.trim()) return;
+    setLoading(true);
+    const id = await actions.createAccount(name.trim());
+    setLoading(false);
+    if (id) setCode(state.account?.inviteCode ?? null);
+  };
+
+  if (code) {
+    return (
+      <AccountFrame>
+        <div style={{ fontSize: 11.5, color: green, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Conta criada</div>
+        <div style={{ fontWeight: 800, letterSpacing: '-0.028em', fontSize: 32, lineHeight: 1.1, maxWidth: 560 }}>Anote esse código pra convidar quem falta.</div>
+        <div style={{ fontSize: 14, color: ink2, maxWidth: 460, lineHeight: 1.5 }}>Compartilhe com a outra pessoa — ela usa esse código na tela de login, em "entrar com um código".</div>
+        <div style={{
+          marginTop: 4, padding: '16px 28px', border: `1.6px solid ${ink}`, borderRadius: 12, background: paper2,
+          fontSize: 30, fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'monospace',
+        }}>{code}</div>
+        <Button size="lg" onClick={onCreated}>Continuar →</Button>
+      </AccountFrame>
+    );
+  }
+
+  return (
+    <AccountFrame>
+      <div style={{ fontSize: 11.5, color: blue, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Nova conta</div>
+      <div style={{ fontWeight: 800, letterSpacing: '-0.028em', fontSize: 32, lineHeight: 1.1, maxWidth: 560 }}>Como vamos chamar essa conta?</div>
+      <div style={{ fontSize: 14, color: ink2, maxWidth: 440, lineHeight: 1.5 }}>Ex: "Davi & Eduarda" — só pra você reconhecer depois, se tiver mais de uma.</div>
+      <div style={{ width: '100%', maxWidth: 340 }}>
+        <Input value={name} onChange={setName} placeholder="Nome da conta" onEnter={create} />
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Button variant="ghost" onClick={onBack}>← voltar</Button>
+        <Button onClick={create} disabled={loading || !name.trim()}>{loading ? 'criando…' : 'Criar conta →'}</Button>
+      </div>
+    </AccountFrame>
+  );
+}
+
+export function JoinAccountScreen({ onBack }: { onBack: () => void }) {
+  const { actions } = useStore();
+  const [code, setCode] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+
+  const join = async () => {
+    if (!code.trim()) return;
+    setLoading(true);
+    await actions.joinAccount(code);
+    setLoading(false);
+  };
+
+  return (
+    <AccountFrame>
+      <div style={{ fontSize: 11.5, color: blue, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Entrar com convite</div>
+      <div style={{ fontWeight: 800, letterSpacing: '-0.028em', fontSize: 32, lineHeight: 1.1, maxWidth: 560 }}>Cole o código que você recebeu.</div>
+      <div style={{ width: '100%', maxWidth: 300 }}>
+        <Input value={code} onChange={v => setCode(v.toUpperCase())} placeholder="ex: A1B2C3D4" onEnter={join} style={{ textAlign: 'center', fontFamily: 'monospace', fontSize: 16, letterSpacing: '0.08em' }} />
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <Button variant="ghost" onClick={onBack}>← voltar</Button>
+        <Button onClick={join} disabled={loading || !code.trim()}>{loading ? 'entrando…' : 'Entrar →'}</Button>
+      </div>
+    </AccountFrame>
   );
 }
 

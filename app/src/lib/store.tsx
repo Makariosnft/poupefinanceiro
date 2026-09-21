@@ -204,10 +204,9 @@ function buildActions(
     setActiveGoal: (id: string) => setUi(u => ({ ...u, activeGoalId: id })),
 
     deleteMonth: (month: string) => {
-      let ids: string[] = [];
-      lists.setTransactions(l => { ids = l.filter(t => monthOf(t.date) === month).map(t => t.id); return l.filter(t => monthOf(t.date) !== month); });
+      lists.setTransactions(l => l.filter(t => monthOf(t.date) !== month));
       const accountId = accountIdRef.current;
-      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${month}-01`).lte('date', `${month}-31`).then(() => {});
+      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${month}-01`).lt('date', `${addMonths(month, 1)}-01`).then(() => {});
       toast('Lançamentos do mês apagados', 'warn');
     },
     deleteYear: (year: string) => {

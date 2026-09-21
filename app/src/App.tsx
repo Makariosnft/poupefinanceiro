@@ -3,7 +3,10 @@ import { StoreProvider, useStore } from './lib/store';
 import { Toaster } from './components/ui';
 import { Lancamentos, GastosDoMes, GanhosDoMes, Fixos, Parcelamentos, QuickAddModal } from './screens/transactions';
 import { Diagnostico, Dividas, Metas, Relatorios } from './screens/insights';
-import { Login, Welcome, People, Categories, PaymentTypes, Done, type OnbStepProps } from './screens/onboarding';
+import {
+  Login, AccountChoice, CreateAccountScreen, JoinAccountScreen,
+  People, Categories, PaymentTypes, Done, type OnbStepProps,
+} from './screens/onboarding';
 import { Settings } from './screens/settings';
 
 const SCREENS: Record<string, React.ComponentType<{ onNavigate: (t: string) => void; onOpenModal: () => void }>> = {
@@ -19,30 +22,44 @@ const SCREENS: Record<string, React.ComponentType<{ onNavigate: (t: string) => v
   'Configurações': Settings,
 };
 
-const ONB_STEPS: React.ComponentType<OnbStepProps>[] = [Welcome, People, Categories, PaymentTypes, Done];
+const WIZARD_STEPS: React.ComponentType<OnbStepProps>[] = [People, Categories, PaymentTypes, Done];
+
+function Splash() {
+  return <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: '#8a857a', fontFamily: 'Montserrat, sans-serif' }}>carregando…</div>;
+}
 
 function AppShell() {
-  const { state, actions, toasts } = useStore();
-  const [stage, setStage] = React.useState<'login' | 'onboarding' | 'app'>(() => (
-    !state.ui.authed ? 'login' : !state.ui.onboarded ? 'onboarding' : 'app'
-  ));
-  const [onbStep, setOnbStep] = React.useState(0);
+  const { state, toasts } = useStore();
   const [tab, setTab] = React.useState('Lançamentos');
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [onbMode, setOnbMode] = React.useState<'choice' | 'create' | 'join' | 'wizard'>('choice');
+  const [onbStep, setOnbStep] = React.useState(0);
 
-  if (stage === 'login') {
-    return <Login onLogin={() => { actions.login(); setStage('onboarding'); }} />;
-  }
+  if (state.ui.authLoading) return <Splash />;
+  if (!state.ui.authed) return <Login />;
+  if (state.ui.accountLoading) return <Splash />;
 
-  if (stage === 'onboarding') {
-    const Step = ONB_STEPS[onbStep];
-    const isLast = onbStep === ONB_STEPS.length - 1;
-    const finish = () => { actions.completeOnboarding(); setStage('app'); };
+  if (!state.ui.accountId || onbMode === 'wizard') {
+    if (!state.ui.accountId) {
+      if (onbMode === 'join') return <JoinAccountScreen onBack={() => setOnbMode('choice')} />;
+      if (onbMode === 'create') {
+        return (
+          <CreateAccountScreen
+            onBack={() => setOnbMode('choice')}
+            onCreated={() => { setOnbMode('wizard'); setOnbStep(0); }}
+          />
+        );
+      }
+      return <AccountChoice onCreate={() => setOnbMode('create')} onJoin={() => setOnbMode('join')} />;
+    }
+
+    const Step = WIZARD_STEPS[onbStep];
+    const isLast = onbStep === WIZARD_STEPS.length - 1;
     return (
       <Step
-        onNext={() => (isLast ? finish() : setOnbStep(s => s + 1))}
-        onBack={() => (onbStep > 0 ? setOnbStep(s => s - 1) : setStage('login'))}
-        onSkip={onbStep > 0 && !isLast ? finish : undefined}
+        onNext={() => (isLast ? setOnbMode('choice') : setOnbStep(s => s + 1))}
+        onBack={onbStep > 0 ? () => setOnbStep(s => s - 1) : undefined}
+        onSkip={onbStep > 0 && !isLast ? () => setOnbMode('choice') : undefined}
       />
     );
   }
