@@ -279,9 +279,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
-      const { data: membership } = await supabase.from('account_members').select('account_id').eq('user_id', user.id).limit(1).maybeSingle();
+      const { data: memberships, error } = await supabase
+        .from('account_members').select('account_id').eq('user_id', user.id)
+        .order('created_at', { ascending: true }).limit(1);
       if (cancelled) return;
-      if (membership) setUi(u => ({ ...u, accountId: membership.account_id, accountLoading: false }));
+      if (error) { console.error(error); toast('Não deu pra carregar sua conta. Recarregue a página.', 'error'); setUi(u => ({ ...u, accountLoading: false })); return; }
+      if (memberships && memberships.length > 0) setUi(u => ({ ...u, accountId: memberships[0].account_id, accountLoading: false }));
       else setUi(u => ({ ...u, accountLoading: false }));
     })();
     return () => { cancelled = true; };
