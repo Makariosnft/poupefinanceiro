@@ -1,8 +1,15 @@
 import React from 'react';
-import type { AppState, Category, Debt, Goal, PaymentType, Toast, Transaction } from './types';
+import type { RealtimeChannel } from '@supabase/supabase-js';
+import { supabase } from './supabase';
+import type { Account, AppState, Category, Debt, Goal, PaymentType, Person, Toast, Transaction } from './types';
+import {
+  CATEGORIES_MAP, DATA_TABLES, DEBTS_MAP, GOALS_MAP, PAYMENT_TYPES_MAP, PEOPLE_MAP, TX_MAP,
+  categoriesFromRow, debtsFromRow, goalsFromRow, patchToRow, paymentTypesFromRow, peopleFromRow, txFromRow,
+} from './sync';
 
-const LS_KEY = 'poupe.state.v1';
+const UI_LS_KEY = 'poupe.ui.v1';
 export const uid = () => Math.random().toString(36).slice(2, 9);
+const newId = () => (crypto.randomUUID ? crypto.randomUUID() : uid() + uid());
 
 export const MONTHS_PT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 export const MONTHS_FULL = [
@@ -34,122 +41,14 @@ export const fmt = (n: number) =>
 export const fmt0 = (n: number) => 'R$ ' + Math.round(n || 0).toLocaleString('pt-BR');
 export const dayLabel = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS_PT[Number(iso.slice(5, 7)) - 1].toLowerCase()}`;
 
-// ── Seed ───────────────────────────────────────────────────────────
-function seed(): AppState {
-  const M = thisMonth();
-  const prev = addMonths(M, -1);
-  const P = { davi: uid(), edu: uid() };
-  const C: Record<string, string> = {};
-  const catDefs: [string, string][] = [
-    ['Contas', '#b04a3a'], ['Mercado', '#7a8a3a'], ['Combustível', '#3a6a8a'], ['Carro', '#2f5a48'],
-    ['Beleza', '#c79bb0'], ['Academia', '#7a6ca8'], ['Assinatura', '#d4a24a'], ['Igreja', '#5a8a9a'],
-    ['Fins de semana', '#c97a3a'], ['Saúde', '#8a9a5a'], ['Roupa', '#a86a6a'], ['Viagem', '#c44a4a'],
-    ['Padaria', '#d4b48a'], ['Eletrônico', '#5a5a8a'], ['Presente', '#a85a8a'], ['Salário', '#2f5a48'],
-  ];
-  catDefs.forEach(([n]) => { C[n] = uid(); });
-  const cats: Category[] = catDefs.map(([name, color]) => ({ id: C[name], name, color }));
-
-  const T: Record<string, string> = {};
-  const typeDefs: [string, 'base' | 'card', string][] = [
-    ['Dinheiro', 'base', '#7a8a3a'], ['PIX', 'base', '#2f5a48'], ['Boleto', 'base', '#5a8a9a'],
-    ['Débito', 'base', '#3a6a8a'], ['Nubank', 'card', '#8a3ffc'], ['C6 Bank', 'card', '#1a1a1a'],
-  ];
-  typeDefs.forEach(([n]) => { T[n] = uid(); });
-  const types: PaymentType[] = [
-    { id: T['Dinheiro'], name: 'Dinheiro', kind: 'base', color: '#7a8a3a' },
-    { id: T['PIX'], name: 'PIX', kind: 'base', color: '#2f5a48' },
-    { id: T['Boleto'], name: 'Boleto', kind: 'base', color: '#5a8a9a' },
-    { id: T['Débito'], name: 'Débito', kind: 'base', color: '#3a6a8a' },
-    { id: T['Nubank'], name: 'Nubank', kind: 'card', color: '#8a3ffc', closing: 18, due: 25 },
-    { id: T['C6 Bank'], name: 'C6 Bank', kind: 'card', color: '#1a1a1a', closing: 15, due: 22 },
-  ];
-
-  const d = (n: number) => `${M}-${pad(n)}`;
-  const tx: Transaction[] = [];
-  const push = (o: Omit<Transaction, 'id'>) => tx.push({ id: uid(), ...o });
-
-  push({ kind: 'entrada', desc: 'Salário Davi', amount: 5200, categoryId: C['Salário'], typeId: T['PIX'], personId: P.davi, date: d(5), incomeKind: 'Salário' });
-  push({ kind: 'entrada', desc: 'Salário Eduarda', amount: 3700, categoryId: C['Salário'], typeId: T['PIX'], personId: P.edu, date: d(5), incomeKind: 'Salário' });
-  push({ kind: 'entrada', desc: 'Freela fotos', amount: 450, categoryId: C['Salário'], typeId: T['PIX'], personId: P.edu, date: d(12), incomeKind: 'Extra' });
-
-  const fx = (desc: string, amount: number, day: number, cat: string, type: string, person: string, paid: boolean) =>
-    push({ kind: 'fixo', desc, amount, dayOfMonth: day, categoryId: cat, typeId: type, personId: person, date: `${M}-${pad(day)}`, paidMonths: paid ? [M] : [] });
-  fx('Aluguel', 1800, 5, C['Contas'], T['Boleto'], P.davi, true);
-  fx('Água', 78, 5, C['Contas'], T['Boleto'], P.davi, true);
-  fx('Energia', 187, 12, C['Contas'], T['Boleto'], P.davi, false);
-  fx('Internet', 99, 15, C['Contas'], T['Boleto'], P.davi, false);
-  fx('Multisports', 170, 5, C['Academia'], T['PIX'], P.davi, true);
-  fx('Dízimo Davi', 250, 5, C['Igreja'], T['PIX'], P.davi, true);
-  fx('Dízimo Eduarda', 250, 28, C['Igreja'], T['PIX'], P.edu, false);
-  fx('iCloud', 14.9, 25, C['Assinatura'], T['Nubank'], P.davi, false);
-  fx('Smiles', 49, 25, C['Assinatura'], T['C6 Bank'], P.davi, false);
-
-  const pc = (desc: string, amount: number, start: string, total: number, cat: string, type: string, person: string) =>
-    push({ kind: 'parcelamento', desc, amount, startMonth: start, totalInstallments: total, categoryId: cat, typeId: type, personId: person, date: `${start}-10` });
-  pc('iPhone 15', 320, addMonths(M, -5), 12, C['Eletrônico'], T['Nubank'], P.davi);
-  pc('Sofá retrátil', 199, addMonths(M, -2), 10, C['Roupa'], T['C6 Bank'], P.edu);
-  pc('Viagem RJ', 450, addMonths(M, -1), 4, C['Viagem'], T['Nubank'], P.davi);
-  pc('Notebook Dell', 280, addMonths(M, -8), 10, C['Eletrônico'], T['C6 Bank'], P.edu);
-  pc('Curso de inglês', 190, M, 6, C['Assinatura'], T['PIX'], P.edu);
-
-  const cm = (desc: string, amount: number, day: number, cat: string, type: string, person: string) =>
-    push({ kind: 'comum', desc, amount, categoryId: cat, typeId: type, personId: person, date: d(day) });
-  cm('Mercado do mês', 642.3, 3, C['Mercado'], T['Nubank'], P.edu);
-  cm('Posto Shell', 220, 4, C['Combustível'], T['C6 Bank'], P.davi);
-  cm('Cinema', 64, 6, C['Fins de semana'], T['PIX'], P.davi);
-  cm('Farmácia', 38.9, 7, C['Saúde'], T['Débito'], P.edu);
-  cm('Padaria da esquina', 28.5, 8, C['Padaria'], T['PIX'], P.edu);
-  cm('Uber', 22, 9, C['Carro'], T['PIX'], P.davi);
-  cm('Presente aniversário', 120, 10, C['Presente'], T['Nubank'], P.davi);
-  cm('Café Cabral', 18, 11, C['Padaria'], T['PIX'], P.davi);
-  cm('Roupa nova', 189.9, 12, C['Roupa'], T['Nubank'], P.edu);
-  cm('Capinha celular', 45, 13, C['Eletrônico'], T['PIX'], P.davi);
-
-  const pd = (n: number) => `${prev}-${pad(n)}`;
-  push({ kind: 'entrada', desc: 'Salário Davi', amount: 5200, categoryId: C['Salário'], typeId: T['PIX'], personId: P.davi, date: pd(5), incomeKind: 'Salário' });
-  push({ kind: 'entrada', desc: 'Salário Eduarda', amount: 3700, categoryId: C['Salário'], typeId: T['PIX'], personId: P.edu, date: pd(5), incomeKind: 'Salário' });
-  ([
-    ['Mercado do mês', 598, 3, 'Mercado', 'Nubank', 'edu'],
-    ['Posto Shell', 240, 5, 'Combustível', 'C6 Bank', 'davi'],
-    ['Restaurante', 186, 9, 'Fins de semana', 'Nubank', 'davi'],
-    ['Farmácia', 74, 14, 'Saúde', 'Débito', 'edu'],
-    ['Padaria', 96, 18, 'Padaria', 'PIX', 'edu'],
-  ] as [string, number, number, string, string, 'davi' | 'edu'][]).forEach(([desc, amount, day, cat, type, who]) =>
-    push({ kind: 'comum', desc, amount, categoryId: C[cat], typeId: T[type], personId: P[who], date: pd(day) }));
-
-  return {
-    people: [{ id: P.davi, name: 'Davi', color: '#3a6a8a' }, { id: P.edu, name: 'Eduarda', color: '#c79bb0' }],
-    categories: cats,
-    paymentTypes: types,
-    transactions: tx,
-    debts: [
-      { id: uid(), name: 'Cartão Nubank', total: 4200, paid: 1260, rate: 13.2, min: 380, personId: P.davi, color: '#b04a3a' },
-      { id: uid(), name: 'Financiamento carro', total: 18900, paid: 6800, rate: 2.4, min: 720, personId: P.davi, color: '#c97a3a' },
-      { id: uid(), name: 'Cartão C6', total: 1850, paid: 950, rate: 11.8, min: 220, personId: P.edu, color: '#a86a6a' },
-      { id: uid(), name: 'Empréstimo família', total: 3000, paid: 1500, rate: 0, min: 150, personId: P.davi, color: '#7a6ca8' },
-      { id: uid(), name: 'Crediário sofá', total: 1200, paid: 300, rate: 4.5, min: 100, personId: P.edu, color: '#8a6a4a' },
-    ],
-    goals: [
-      { id: uid(), name: 'Apto na praia', emoji: '🏠', target: 50000, current: 12300, color: '#2f5a48' },
-      { id: uid(), name: 'Reserva 6 meses', emoji: '🛟', target: 39312, current: 1950, color: '#3a6a8a' },
-      { id: uid(), name: 'Viagem Europa', emoji: '✈️', target: 18000, current: 4200, color: '#d4a24a' },
-    ],
-    ui: { month: M, personId: 'all', activeGoalId: null, authed: false, onboarded: false },
-  };
-}
-
-function load(): AppState {
+function loadUiPrefs() {
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return seed();
+    const raw = localStorage.getItem(UI_LS_KEY);
+    if (!raw) return { month: thisMonth(), personId: 'all' };
     const s = JSON.parse(raw);
-    if (!s || !s.transactions || !s.people) return seed();
-    if (!s.ui) s.ui = { month: thisMonth(), personId: 'all', activeGoalId: null, authed: false, onboarded: false };
-    if (s.ui.authed === undefined) s.ui.authed = false;
-    if (s.ui.onboarded === undefined) s.ui.onboarded = false;
-    return s;
+    return { month: s.month || thisMonth(), personId: s.personId || 'all' };
   } catch {
-    return seed();
+    return { month: thisMonth(), personId: 'all' };
   }
 }
 
@@ -163,106 +62,184 @@ interface StoreCtxValue {
 
 const StoreCtx = React.createContext<StoreCtxValue | null>(null);
 
-function buildActions(
-  up: (fn: (s: AppState) => AppState) => void,
-  toast: (msg: string, tone?: Toast['tone']) => void,
+function makeCrud<T extends { id: string }>(
+  table: string,
+  setList: React.Dispatch<React.SetStateAction<T[]>>,
+  map: Record<string, string>,
+  accountIdRef: React.MutableRefObject<string | null>,
 ) {
   return {
-    setMonth: (m: string) => up(s => ({ ...s, ui: { ...s.ui, month: m } })),
-    setPerson: (id: string) => up(s => ({ ...s, ui: { ...s.ui, personId: id } })),
+    add: (item: Omit<T, 'id'>, id = newId()) => {
+      const accountId = accountIdRef.current;
+      if (!accountId) return null;
+      const full = { id, ...item } as T;
+      setList(l => [full, ...l]);
+      supabase.from(table).insert({ id, account_id: accountId, ...patchToRow(full, map) }).then(({ error }) => {
+        if (error) { console.error(error); setList(l => l.filter(x => x.id !== id)); }
+      });
+      return full;
+    },
+    update: (id: string, patch: Partial<T>) => {
+      setList(l => l.map(x => (x.id === id ? { ...x, ...patch } : x)));
+      supabase.from(table).update(patchToRow(patch, map)).eq('id', id).then(({ error }) => {
+        if (error) console.error(error);
+      });
+    },
+    remove: (id: string) => {
+      let removed: T | undefined;
+      setList(l => { removed = l.find(x => x.id === id); return l.filter(x => x.id !== id); });
+      supabase.from(table).delete().eq('id', id).then(({ error }) => {
+        if (error && removed) { console.error(error); setList(l => [removed as T, ...l]); }
+      });
+    },
+  };
+}
 
-    login: () => up(s => ({ ...s, ui: { ...s.ui, authed: true } })),
-    logout: () => up(s => ({ ...s, ui: { ...s.ui, authed: false } })),
-    completeOnboarding: () => up(s => ({ ...s, ui: { ...s.ui, onboarded: true } })),
+function buildActions(
+  lists: {
+    setPeople: React.Dispatch<React.SetStateAction<Person[]>>;
+    setCategories: React.Dispatch<React.SetStateAction<Category[]>>;
+    setPaymentTypes: React.Dispatch<React.SetStateAction<PaymentType[]>>;
+    setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
+    setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
+    setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
+  },
+  accountIdRef: React.MutableRefObject<string | null>,
+  setUi: React.Dispatch<React.SetStateAction<AppState['ui']>>,
+  setAccount: React.Dispatch<React.SetStateAction<Account | null>>,
+  toast: (msg: string, tone?: Toast['tone']) => void,
+) {
+  const people = makeCrud<Person>('people', lists.setPeople, PEOPLE_MAP, accountIdRef);
+  const categories = makeCrud<Category>('categories', lists.setCategories, CATEGORIES_MAP, accountIdRef);
+  const paymentTypes = makeCrud<PaymentType>('payment_types', lists.setPaymentTypes, PAYMENT_TYPES_MAP, accountIdRef);
+  const transactions = makeCrud<Transaction>('transactions', lists.setTransactions, TX_MAP, accountIdRef);
+  const debts = makeCrud<Debt>('debts', lists.setDebts, DEBTS_MAP, accountIdRef);
+  const goals = makeCrud<Goal>('goals', lists.setGoals, GOALS_MAP, accountIdRef);
+
+  return {
+    setMonth: (m: string) => setUi(u => ({ ...u, month: m })),
+    setPerson: (id: string) => setUi(u => ({ ...u, personId: id })),
+
+    signUp: async (email: string, password: string) => {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) { toast(error.message, 'error'); return; }
+      if (!data.session) toast('Verifique seu e-mail para confirmar a conta.', 'warn');
+    },
+    signIn: async (email: string, password: string) => {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) toast('E-mail ou senha inválidos.', 'error');
+    },
+    signOut: async () => { await supabase.auth.signOut(); },
+
+    createAccount: async (name: string) => {
+      const { data, error } = await supabase.rpc('create_account', { p_name: name });
+      const row = data && data[0];
+      if (error || !row) { toast('Erro ao criar conta.', 'error'); return null; }
+      setAccount({ id: row.account_id, name, inviteCode: row.invite_code });
+      setUi(u => ({ ...u, accountId: row.account_id }));
+      return row.account_id as string;
+    },
+    joinAccount: async (code: string) => {
+      const { data, error } = await supabase.rpc('join_account_by_code', { p_code: code.trim() });
+      if (error || !data) { toast('Código de convite inválido.', 'error'); return null; }
+      setUi(u => ({ ...u, accountId: data as string }));
+      return data as string;
+    },
 
     addTx: (t: Omit<Transaction, 'id'>) => {
-      up(s => ({ ...s, transactions: [{ id: uid(), ...t }, ...s.transactions] }));
+      transactions.add(t);
       toast(t.kind === 'entrada' ? 'Entrada registrada' : 'Lançamento salvo');
     },
-    delTx: (id: string) => {
-      up(s => ({ ...s, transactions: s.transactions.filter(t => t.id !== id) }));
-      toast('Lançamento removido', 'warn');
-    },
-    updateTx: (id: string, patch: Partial<Transaction>) =>
-      up(s => ({ ...s, transactions: s.transactions.map(t => (t.id === id ? { ...t, ...patch } : t)) })),
+    delTx: (id: string) => { transactions.remove(id); toast('Lançamento removido', 'warn'); },
+    updateTx: (id: string, patch: Partial<Transaction>) => transactions.update(id, patch),
 
-    toggleFixoPaid: (id: string, month: string) =>
-      up(s => ({
-        ...s,
-        transactions: s.transactions.map(t => {
-          if (t.id !== id) return t;
-          const pm = t.paidMonths || [];
-          return { ...t, paidMonths: pm.includes(month) ? pm.filter(m => m !== month) : [...pm, month] };
-        }),
-      })),
+    toggleFixoPaid: (id: string, month: string) => {
+      lists.setTransactions(l => {
+        const t = l.find(x => x.id === id);
+        if (!t) return l;
+        const pm = t.paidMonths || [];
+        const next = pm.includes(month) ? pm.filter(m => m !== month) : [...pm, month];
+        transactions.update(id, { paidMonths: next });
+        return l;
+      });
+    },
 
-    addCategory: (name: string, color: string) => {
-      up(s => ({ ...s, categories: [...s.categories, { id: uid(), name, color }] }));
-      toast(`Categoria "${name}" criada`);
-    },
-    delCategory: (id: string) => up(s => ({ ...s, categories: s.categories.filter(c => c.id !== id) })),
-    addPaymentType: (t: Omit<PaymentType, 'id'>) => {
-      up(s => ({ ...s, paymentTypes: [...s.paymentTypes, { id: uid(), ...t }] }));
-      toast(`${t.name} adicionado`);
-    },
-    delPaymentType: (id: string) => up(s => ({ ...s, paymentTypes: s.paymentTypes.filter(t => t.id !== id) })),
-    addPerson: (name: string, color: string) => {
-      up(s => ({ ...s, people: [...s.people, { id: uid(), name, color }] }));
-      toast(`${name} adicionado(a)`);
-    },
-    delPerson: (id: string) => up(s => ({ ...s, people: s.people.filter(p => p.id !== id) })),
+    addCategory: (name: string, color: string) => { categories.add({ name, color }); toast(`Categoria "${name}" criada`); },
+    delCategory: (id: string) => categories.remove(id),
+    addPaymentType: (t: Omit<PaymentType, 'id'>) => { paymentTypes.add(t); toast(`${t.name} adicionado`); },
+    delPaymentType: (id: string) => paymentTypes.remove(id),
+    addPerson: (name: string, color: string) => { people.add({ name, color }); toast(`${name} adicionado(a)`); },
+    delPerson: (id: string) => people.remove(id),
 
     addDebt: (d: Omit<Debt, 'id' | 'color' | 'paid'> & Partial<Pick<Debt, 'color' | 'paid'>>) => {
-      up(s => ({ ...s, debts: [...s.debts, { id: uid(), color: '#b04a3a', paid: 0, ...d }] }));
+      debts.add({ color: '#b04a3a', paid: 0, ...d } as Omit<Debt, 'id'>);
       toast('Dívida adicionada');
     },
-    delDebt: (id: string) => {
-      up(s => ({ ...s, debts: s.debts.filter(d => d.id !== id) }));
-      toast('Dívida removida', 'warn');
-    },
+    delDebt: (id: string) => { debts.remove(id); toast('Dívida removida', 'warn'); },
     payDebt: (id: string, amount: number) => {
-      up(s => ({ ...s, debts: s.debts.map(d => (d.id === id ? { ...d, paid: Math.min(d.total, d.paid + amount) } : d)) }));
+      lists.setDebts(l => {
+        const d = l.find(x => x.id === id);
+        if (!d) return l;
+        debts.update(id, { paid: Math.min(d.total, d.paid + amount) });
+        return l;
+      });
       toast(`Pagamento de ${fmt0(amount)} registrado`);
     },
 
     addGoal: (g: Omit<Goal, 'id' | 'current' | 'color' | 'emoji' | 'personId'> & Partial<Pick<Goal, 'current' | 'color' | 'emoji' | 'personId'>>) => {
-      up(s => ({ ...s, goals: [...s.goals, { id: uid(), current: 0, color: '#2f5a48', emoji: '🎯', ...g }] }));
+      goals.add({ current: 0, color: '#2f5a48', emoji: '🎯', ...g } as Omit<Goal, 'id'>);
       toast('Meta criada');
     },
-    updateGoal: (id: string, patch: Partial<Goal>) => {
-      up(s => ({ ...s, goals: s.goals.map(g => (g.id === id ? { ...g, ...patch } : g)) }));
-      toast('Meta atualizada');
-    },
-    delGoal: (id: string) => {
-      up(s => ({ ...s, goals: s.goals.filter(g => g.id !== id) }));
-      toast('Meta removida', 'warn');
-    },
+    updateGoal: (id: string, patch: Partial<Goal>) => { goals.update(id, patch); toast('Meta atualizada'); },
+    delGoal: (id: string) => { goals.remove(id); toast('Meta removida', 'warn'); },
     contributeGoal: (id: string, amount: number) => {
-      up(s => ({ ...s, goals: s.goals.map(g => (g.id === id ? { ...g, current: Math.min(g.target, g.current + amount) } : g)) }));
+      lists.setGoals(l => {
+        const g = l.find(x => x.id === id);
+        if (!g) return l;
+        goals.update(id, { current: Math.min(g.target, g.current + amount) });
+        return l;
+      });
       toast(`Aporte de ${fmt0(amount)} feito`);
     },
-    setActiveGoal: (id: string) => up(s => ({ ...s, ui: { ...s.ui, activeGoalId: id } })),
+    setActiveGoal: (id: string) => setUi(u => ({ ...u, activeGoalId: id })),
 
     deleteMonth: (month: string) => {
-      up(s => ({ ...s, transactions: s.transactions.filter(t => monthOf(t.date) !== month) }));
+      let ids: string[] = [];
+      lists.setTransactions(l => { ids = l.filter(t => monthOf(t.date) === month).map(t => t.id); return l.filter(t => monthOf(t.date) !== month); });
+      const accountId = accountIdRef.current;
+      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${month}-01`).lte('date', `${month}-31`).then(() => {});
       toast('Lançamentos do mês apagados', 'warn');
     },
     deleteYear: (year: string) => {
-      up(s => ({ ...s, transactions: s.transactions.filter(t => t.date.slice(0, 4) !== year) }));
+      lists.setTransactions(l => l.filter(t => t.date.slice(0, 4) !== year));
+      const accountId = accountIdRef.current;
+      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${year}-01-01`).lte('date', `${year}-12-31`).then(() => {});
       toast('Lançamentos do ano apagados', 'warn');
     },
-
-    reset: () => { up(() => seed()); toast('Dados restaurados'); },
   };
 }
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = React.useState<AppState>(load);
+  const uiPrefs = React.useMemo(loadUiPrefs, []);
+  const [ui, setUi] = React.useState<AppState['ui']>({
+    month: uiPrefs.month, personId: uiPrefs.personId, activeGoalId: null,
+    authed: false, authLoading: true, accountId: null, accountLoading: false,
+  });
+  const [account, setAccount] = React.useState<Account | null>(null);
+  const [people, setPeople] = React.useState<Person[]>([]);
+  const [categories, setCategories] = React.useState<Category[]>([]);
+  const [paymentTypes, setPaymentTypes] = React.useState<PaymentType[]>([]);
+  const [transactions, setTransactions] = React.useState<Transaction[]>([]);
+  const [debts, setDebts] = React.useState<Debt[]>([]);
+  const [goals, setGoals] = React.useState<Goal[]>([]);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
+  const accountIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => { accountIdRef.current = ui.accountId; }, [ui.accountId]);
+
   React.useEffect(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch { /* ignore quota errors */ }
-  }, [state]);
+    try { localStorage.setItem(UI_LS_KEY, JSON.stringify({ month: ui.month, personId: ui.personId })); } catch { /* ignore */ }
+  }, [ui.month, ui.personId]);
 
   const toast = React.useCallback((msg: string, tone: Toast['tone'] = 'ok') => {
     const id = uid();
@@ -270,8 +247,108 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2600);
   }, []);
 
-  const up = React.useCallback((fn: (s: AppState) => AppState) => setState(s => fn(s)), []);
-  const actions = React.useMemo(() => buildActions(up, toast), [up, toast]);
+  const actions = React.useMemo(
+    () => buildActions(
+      { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals },
+      accountIdRef, setUi, setAccount, toast,
+    ),
+    [toast],
+  );
+
+  // Sessão de autenticação
+  React.useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setUi(u => ({ ...u, authed: !!data.session, authLoading: false }));
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUi(u => ({ ...u, authed: !!session, authLoading: false }));
+      if (!session) {
+        setUi(u => ({ ...u, accountId: null }));
+        setAccount(null);
+        setPeople([]); setCategories([]); setPaymentTypes([]); setTransactions([]); setDebts([]); setGoals([]);
+      }
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  // Descobrir a conta (casal) do usuário logado
+  React.useEffect(() => {
+    if (!ui.authed || ui.accountId) return;
+    let cancelled = false;
+    setUi(u => ({ ...u, accountLoading: true }));
+    (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data: membership } = await supabase.from('account_members').select('account_id').eq('user_id', user.id).limit(1).maybeSingle();
+      if (cancelled) return;
+      if (membership) setUi(u => ({ ...u, accountId: membership.account_id, accountLoading: false }));
+      else setUi(u => ({ ...u, accountLoading: false }));
+    })();
+    return () => { cancelled = true; };
+  }, [ui.authed, ui.accountId]);
+
+  // Carregar dados da conta + assinar mudanças em tempo real
+  React.useEffect(() => {
+    const accountId = ui.accountId;
+    if (!accountId) return;
+    let cancelled = false;
+
+    (async () => {
+      const { data: acc } = await supabase.from('accounts').select('id,name,invite_code').eq('id', accountId).maybeSingle();
+      if (!cancelled && acc) setAccount({ id: acc.id, name: acc.name, inviteCode: acc.invite_code });
+
+      const [p, c, pt, tx, d, g] = await Promise.all([
+        supabase.from('people').select('*').eq('account_id', accountId),
+        supabase.from('categories').select('*').eq('account_id', accountId),
+        supabase.from('payment_types').select('*').eq('account_id', accountId),
+        supabase.from('transactions').select('*').eq('account_id', accountId),
+        supabase.from('debts').select('*').eq('account_id', accountId),
+        supabase.from('goals').select('*').eq('account_id', accountId),
+      ]);
+      if (cancelled) return;
+      setPeople((p.data || []).map(peopleFromRow));
+      setCategories((c.data || []).map(categoriesFromRow));
+      setPaymentTypes((pt.data || []).map(paymentTypesFromRow));
+      setTransactions((tx.data || []).map(txFromRow));
+      setDebts((d.data || []).map(debtsFromRow));
+      setGoals((g.data || []).map(goalsFromRow));
+    })();
+
+    const applyChange = <T extends { id: string }>(
+      setList: React.Dispatch<React.SetStateAction<T[]>>,
+      fromRow: (r: any) => T,
+    ) => (payload: any) => {
+      if (payload.eventType === 'DELETE') {
+        setList(l => l.filter(x => x.id !== payload.old.id));
+        return;
+      }
+      const item = fromRow(payload.new);
+      setList(l => {
+        const idx = l.findIndex(x => x.id === item.id);
+        if (idx === -1) return [item, ...l];
+        const copy = l.slice(); copy[idx] = item; return copy;
+      });
+    };
+
+    const channel: RealtimeChannel = supabase.channel(`account-${accountId}`);
+    const wire = (table: typeof DATA_TABLES[number], setList: any, fromRow: any) => {
+      channel.on('postgres_changes', { event: '*', schema: 'public', table, filter: `account_id=eq.${accountId}` }, applyChange(setList, fromRow));
+    };
+    wire('people', setPeople, peopleFromRow);
+    wire('categories', setCategories, categoriesFromRow);
+    wire('payment_types', setPaymentTypes, paymentTypesFromRow);
+    wire('transactions', setTransactions, txFromRow);
+    wire('debts', setDebts, debtsFromRow);
+    wire('goals', setGoals, goalsFromRow);
+    channel.subscribe();
+
+    return () => { cancelled = true; supabase.removeChannel(channel); };
+  }, [ui.accountId]);
+
+  const state = React.useMemo<AppState>(
+    () => ({ people, categories, paymentTypes, transactions, debts, goals, account, ui }),
+    [people, categories, paymentTypes, transactions, debts, goals, account, ui],
+  );
   const value = React.useMemo(() => ({ state, actions, toast, toasts }), [state, actions, toast, toasts]);
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;

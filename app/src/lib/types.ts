@@ -66,7 +66,15 @@ export interface UIState {
   personId: string; // 'all' | Person id
   activeGoalId: string | null;
   authed: boolean;
-  onboarded: boolean;
+  authLoading: boolean;
+  accountId: string | null;
+  accountLoading: boolean;
+}
+
+export interface Account {
+  id: string;
+  name: string;
+  inviteCode: string;
 }
 
 export interface AppState {
@@ -76,6 +84,7 @@ export interface AppState {
   transactions: Transaction[];
   debts: Debt[];
   goals: Goal[];
+  account: Account | null;
   ui: UIState;
 }
 
