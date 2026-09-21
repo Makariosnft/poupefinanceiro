@@ -52,41 +52,47 @@ function AppShell() {
     if (!state.ui.authed) { initialized.current = false; setScreen(null); }
   }, [state.ui.authed]);
 
-  if (state.ui.authLoading) return <Splash />;
-  if (!state.ui.authed) return <Login />;
-  if (!state.ui.accountChecked || screen === null) return <Splash />;
-
-  if (screen === 'choice') {
-    return <AccountChoice onCreate={() => setScreen('create')} onJoin={() => setScreen('join')} />;
-  }
-  if (screen === 'join') {
-    return <JoinAccountScreen onBack={() => setScreen('choice')} onJoined={() => setScreen('app')} />;
-  }
-  if (screen === 'create') {
-    return (
+  let body: React.ReactNode;
+  if (state.ui.authLoading) {
+    body = <Splash />;
+  } else if (!state.ui.authed) {
+    body = <Login />;
+  } else if (!state.ui.accountChecked || screen === null) {
+    body = <Splash />;
+  } else if (screen === 'choice') {
+    body = <AccountChoice onCreate={() => setScreen('create')} onJoin={() => setScreen('join')} />;
+  } else if (screen === 'join') {
+    body = <JoinAccountScreen onBack={() => setScreen('choice')} onJoined={() => setScreen('app')} />;
+  } else if (screen === 'create') {
+    body = (
       <CreateAccountScreen
         onBack={() => setScreen('choice')}
         onCreated={() => { setScreen('wizard'); setOnbStep(0); }}
       />
     );
-  }
-  if (screen === 'wizard') {
+  } else if (screen === 'wizard') {
     const Step = WIZARD_STEPS[onbStep];
     const isLast = onbStep === WIZARD_STEPS.length - 1;
-    return (
+    body = (
       <Step
         onNext={() => (isLast ? setScreen('app') : setOnbStep(s => s + 1))}
         onBack={onbStep > 0 ? () => setOnbStep(s => s - 1) : undefined}
         onSkip={onbStep > 0 && !isLast ? () => setScreen('app') : undefined}
       />
     );
+  } else {
+    const Screen = SCREENS[tab] || Lancamentos;
+    body = (
+      <>
+        <Screen onNavigate={setTab} onOpenModal={() => setModalOpen(true)} />
+        <QuickAddModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      </>
+    );
   }
 
-  const Screen = SCREENS[tab] || Lancamentos;
   return (
     <div style={{ height: '100%', position: 'relative' }}>
-      <Screen onNavigate={setTab} onOpenModal={() => setModalOpen(true)} />
-      <QuickAddModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      {body}
       <Toaster toasts={toasts} />
     </div>
   );
