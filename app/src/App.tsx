@@ -18,7 +18,7 @@ const SCREENS: Record<string, React.ComponentType<{ onNavigate: (t: string) => v
   'Diagnóstico': Diagnostico,
   'Dívidas': Dividas,
   'Metas': Metas,
-  'Relatórios': Relatorios,
+  'Resumo': Relatorios,
   'Configurações': Settings,
 };
 

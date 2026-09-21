@@ -163,7 +163,7 @@ export function Diagnostico({ onNavigate, onOpenModal }: ScreenProps) {
                   em fixos, parcelas e dívidas. Sua reserva cobre <b>{h.reserveMonths.toFixed(1)} mês</b> de despesas.
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginTop: 13, flexWrap: 'wrap' }}>
-                  <Button size="sm" onClick={() => onNavigate('Relatórios')}>ver relatório completo →</Button>
+                  <Button size="sm" onClick={() => onNavigate('Resumo')}>ver relatório completo →</Button>
                   <Button size="sm" variant="outline" onClick={() => onNavigate('Metas')}>simular metas</Button>
                   <Button size="sm" variant="dashed" onClick={() => onNavigate('Dívidas')}>plano de dívidas</Button>
                 </div>
@@ -781,7 +781,7 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
-      <TopBar activeTab="Relatórios" onNavigate={onNavigate} />
+      <TopBar activeTab="Resumo" onNavigate={onNavigate} />
       <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, padding: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
           <Card style={{ flexShrink: 0 }}>
