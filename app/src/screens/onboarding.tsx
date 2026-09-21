@@ -231,7 +231,7 @@ export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void;
   );
 }
 
-export function JoinAccountScreen({ onBack }: { onBack: () => void }) {
+export function JoinAccountScreen({ onBack, onJoined }: { onBack: () => void; onJoined: () => void }) {
   const { actions } = useStore();
   const [code, setCode] = React.useState('');
   const [loading, setLoading] = React.useState(false);
@@ -239,8 +239,9 @@ export function JoinAccountScreen({ onBack }: { onBack: () => void }) {
   const join = async () => {
     if (!code.trim()) return;
     setLoading(true);
-    await actions.joinAccount(code);
+    const id = await actions.joinAccount(code);
     setLoading(false);
+    if (id) onJoined();
   };
 
   return (

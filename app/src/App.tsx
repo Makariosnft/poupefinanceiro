@@ -24,6 +24,8 @@ const SCREENS: Record<string, React.ComponentType<{ onNavigate: (t: string) => v
 
 const WIZARD_STEPS: React.ComponentType<OnbStepProps>[] = [People, Categories, PaymentTypes, Done];
 
+type Screen = 'choice' | 'create' | 'join' | 'wizard' | 'app';
+
 function Splash() {
   return <div style={{ height: '100%', display: 'grid', placeItems: 'center', color: '#8a857a', fontFamily: 'Montserrat, sans-serif' }}>carregando…</div>;
 }
@@ -32,34 +34,50 @@ function AppShell() {
   const { state, toasts } = useStore();
   const [tab, setTab] = React.useState('Lançamentos');
   const [modalOpen, setModalOpen] = React.useState(false);
-  const [onbMode, setOnbMode] = React.useState<'choice' | 'create' | 'join' | 'wizard'>('choice');
+  const [screen, setScreen] = React.useState<Screen | null>(null);
   const [onbStep, setOnbStep] = React.useState(0);
+  const initialized = React.useRef(false);
+
+  // Decide the starting screen once, right after we know whether this user
+  // already belongs to an account (returning user -> app; brand new -> choice).
+  // Later transitions are all explicit (see the screens below), so creating
+  // an account mid-flow doesn't jump straight past the invite-code/wizard steps.
+  React.useEffect(() => {
+    if (initialized.current || state.ui.authLoading || !state.ui.authed || state.ui.accountLoading) return;
+    initialized.current = true;
+    setScreen(state.ui.accountId ? 'app' : 'choice');
+  }, [state.ui.authLoading, state.ui.authed, state.ui.accountLoading, state.ui.accountId]);
+
+  React.useEffect(() => {
+    if (!state.ui.authed) initialized.current = false;
+  }, [state.ui.authed]);
 
   if (state.ui.authLoading) return <Splash />;
   if (!state.ui.authed) return <Login />;
-  if (state.ui.accountLoading) return <Splash />;
+  if (state.ui.accountLoading || screen === null) return <Splash />;
 
-  if (!state.ui.accountId || onbMode === 'wizard') {
-    if (!state.ui.accountId) {
-      if (onbMode === 'join') return <JoinAccountScreen onBack={() => setOnbMode('choice')} />;
-      if (onbMode === 'create') {
-        return (
-          <CreateAccountScreen
-            onBack={() => setOnbMode('choice')}
-            onCreated={() => { setOnbMode('wizard'); setOnbStep(0); }}
-          />
-        );
-      }
-      return <AccountChoice onCreate={() => setOnbMode('create')} onJoin={() => setOnbMode('join')} />;
-    }
-
+  if (screen === 'choice') {
+    return <AccountChoice onCreate={() => setScreen('create')} onJoin={() => setScreen('join')} />;
+  }
+  if (screen === 'join') {
+    return <JoinAccountScreen onBack={() => setScreen('choice')} onJoined={() => setScreen('app')} />;
+  }
+  if (screen === 'create') {
+    return (
+      <CreateAccountScreen
+        onBack={() => setScreen('choice')}
+        onCreated={() => { setScreen('wizard'); setOnbStep(0); }}
+      />
+    );
+  }
+  if (screen === 'wizard') {
     const Step = WIZARD_STEPS[onbStep];
     const isLast = onbStep === WIZARD_STEPS.length - 1;
     return (
       <Step
-        onNext={() => (isLast ? setOnbMode('choice') : setOnbStep(s => s + 1))}
+        onNext={() => (isLast ? setScreen('app') : setOnbStep(s => s + 1))}
         onBack={onbStep > 0 ? () => setOnbStep(s => s - 1) : undefined}
-        onSkip={onbStep > 0 && !isLast ? () => setOnbMode('choice') : undefined}
+        onSkip={onbStep > 0 && !isLast ? () => setScreen('app') : undefined}
       />
     );
   }
