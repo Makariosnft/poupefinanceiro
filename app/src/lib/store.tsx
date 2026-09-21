@@ -134,14 +134,14 @@ function buildActions(
     createAccount: async (name: string) => {
       const { data, error } = await supabase.rpc('create_account', { p_name: name });
       const row = data && data[0];
-      if (error || !row) { toast('Erro ao criar conta.', 'error'); return null; }
+      if (error || !row) { console.error(error); toast(error?.message || 'Erro ao criar conta.', 'error'); return null; }
       setAccount({ id: row.account_id, name, inviteCode: row.invite_code });
       setUi(u => ({ ...u, accountId: row.account_id }));
       return row.account_id as string;
     },
     joinAccount: async (code: string) => {
       const { data, error } = await supabase.rpc('join_account_by_code', { p_code: code.trim() });
-      if (error || !data) { toast('Código de convite inválido.', 'error'); return null; }
+      if (error || !data) { console.error(error); toast(error?.message || 'Código de convite inválido.', 'error'); return null; }
       setUi(u => ({ ...u, accountId: data as string }));
       return data as string;
     },
@@ -277,14 +277,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
     setUi(u => ({ ...u, accountLoading: true }));
     (async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: memberships, error } = await supabase
-        .from('account_members').select('account_id').eq('user_id', user.id)
-        .order('created_at', { ascending: true }).limit(1);
+      const { data: accountId, error } = await supabase.rpc('my_account_id');
       if (cancelled) return;
       if (error) { console.error(error); toast('Não deu pra carregar sua conta. Recarregue a página.', 'error'); setUi(u => ({ ...u, accountLoading: false })); return; }
-      if (memberships && memberships.length > 0) setUi(u => ({ ...u, accountId: memberships[0].account_id, accountLoading: false }));
+      if (accountId) setUi(u => ({ ...u, accountId: accountId as string, accountLoading: false }));
       else setUi(u => ({ ...u, accountLoading: false }));
     })();
     return () => { cancelled = true; };
