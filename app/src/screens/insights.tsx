@@ -777,7 +777,6 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const topExpenses = [...allSpend].sort((a, b) => b.amount - a.amount).slice(0, 8);
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
-  const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
   const [openTypeId, setOpenTypeId] = React.useState<string | null>(null);
   const openType = types.find(r => r.type.id === openTypeId);
   const typeBreakdown = openTypeId
@@ -880,23 +879,38 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
             ))}
           </Card>
 
-          <Modal open={!!openTypeId} onClose={() => setOpenTypeId(null)} title={openType ? openType.type.name : ''} width={460}>
-            <div style={{ fontSize: 11.5, color: muted, marginBottom: 12 }}>
+          <Modal open={!!openTypeId} onClose={() => setOpenTypeId(null)} title={openType ? openType.type.name : ''} width={Math.min(880, 210 * Math.max(1, state.people.length) + 60)}>
+            <div style={{ fontSize: 11.5, color: muted, marginBottom: 14 }}>
               {S.monthLabel(month)} · {typeBreakdown.length} lançamentos · total <b>{openType ? S.fmt(openType.value) : ''}</b>
             </div>
-            <div style={{ maxHeight: 420, overflow: 'auto' }}>
-              {typeBreakdown.map((x, i) => (
-                <Row key={x.id + i} last={i === typeBreakdown.length - 1}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto', gap: 8, alignItems: 'center', padding: '8px 2px', fontSize: 12.5 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 99, background: catColor(x.categoryId) }} />
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {x.desc}{'installment' in x ? ` (${x.installment}/${x.totalInstallments})` : ''}
-                      <span style={{ color: muted, fontSize: 10.5, marginLeft: 6 }}>{personName(x.personId)} · {catName(x.categoryId)}</span>
-                    </span>
-                    <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{S.fmt(x.amount)}</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, maxHeight: 420, overflow: 'auto' }}>
+              {state.people.map(p => {
+                const items = typeBreakdown.filter(x => x.personId === p.id);
+                const subtotal = items.reduce((s, x) => s + Number(x.amount || 0), 0);
+                return (
+                  <div key={p.id} style={{ flex: '1 1 190px', minWidth: 180 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, paddingBottom: 6, borderBottom: `1.5px solid ${ink}` }}>
+                      <span style={{ fontWeight: 700, fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 99, background: p.color, flexShrink: 0 }} />{p.name}
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: 12.5 }}>{S.fmt(subtotal)}</span>
+                    </div>
+                    {items.length === 0 ? (
+                      <div style={{ fontSize: 11.5, color: muted }}>Nenhum lançamento</div>
+                    ) : items.map((x, i) => (
+                      <div key={x.id + i} style={{ padding: '6px 0', borderBottom: i === items.length - 1 ? 'none' : `1px dashed ${ink2}30` }}>
+                        <div style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {x.desc}{'installment' in x ? ` (${x.installment}/${x.totalInstallments})` : ''}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+                          <span style={{ fontSize: 10.5, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{catName(x.categoryId)}</span>
+                          <span style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>{S.fmt(x.amount)}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </Row>
-              ))}
+                );
+              })}
             </div>
           </Modal>
 
