@@ -773,9 +773,16 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const cats = S.byCategory(state, month, personId);
   const types = S.byType(state, month, personId);
   const people = S.byPerson(state, month);
-  const topExpenses = [...t.items.comuns, ...t.items.fixos, ...t.items.parcelas].sort((a, b) => b.amount - a.amount).slice(0, 8);
+  const allSpend = [...t.items.comuns, ...t.items.fixos, ...t.items.parcelas];
+  const topExpenses = [...allSpend].sort((a, b) => b.amount - a.amount).slice(0, 8);
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
+  const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
+  const [openTypeId, setOpenTypeId] = React.useState<string | null>(null);
+  const openType = types.find(r => r.type.id === openTypeId);
+  const typeBreakdown = openTypeId
+    ? [...allSpend].filter(x => x.typeId === openTypeId).sort((a, b) => b.amount - a.amount)
+    : [];
 
   const rows = view === 'categoria' ? cats.map(r => ({ id: r.cat.id, label: r.cat.name, color: r.cat.color, value: r.value, expected: r.cat.expectedAmount }))
     : view === 'pagamento' ? types.map(r => ({ id: r.type.id, label: r.type.name, color: r.type.color, value: r.value, expected: undefined as number | undefined }))
@@ -861,9 +868,9 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
 
           <Card pad={12} style={{ flexShrink: 0 }}>
-            <CardTitle sub="do mês inteiro">Saídas por pagamento</CardTitle>
+            <CardTitle sub="do mês inteiro — clique pra ver os lançamentos">Saídas por pagamento</CardTitle>
             {types.length === 0 ? <EmptyState icon="💳" title="Sem dados" /> : types.slice(0, 6).map(r => (
-              <div key={r.type.id} style={{ marginBottom: 8 }}>
+              <div key={r.type.id} onClick={() => setOpenTypeId(r.type.id)} style={{ marginBottom: 8, cursor: 'pointer' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
                   <span><span style={{ width: 8, height: 8, borderRadius: 99, background: r.type.color, display: 'inline-block', marginRight: 6 }} />{r.type.name}</span>
                   <span style={{ fontWeight: 700 }}>{S.fmt(r.value)}</span>
@@ -872,6 +879,26 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
               </div>
             ))}
           </Card>
+
+          <Modal open={!!openTypeId} onClose={() => setOpenTypeId(null)} title={openType ? openType.type.name : ''} width={460}>
+            <div style={{ fontSize: 11.5, color: muted, marginBottom: 12 }}>
+              {S.monthLabel(month)} · {typeBreakdown.length} lançamentos · total <b>{openType ? S.fmt(openType.value) : ''}</b>
+            </div>
+            <div style={{ maxHeight: 420, overflow: 'auto' }}>
+              {typeBreakdown.map((x, i) => (
+                <Row key={x.id + i} last={i === typeBreakdown.length - 1}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '10px 1fr auto', gap: 8, alignItems: 'center', padding: '8px 2px', fontSize: 12.5 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 99, background: catColor(x.categoryId) }} />
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {x.desc}{'installment' in x ? ` (${x.installment}/${x.totalInstallments})` : ''}
+                      <span style={{ color: muted, fontSize: 10.5, marginLeft: 6 }}>{personName(x.personId)} · {catName(x.categoryId)}</span>
+                    </span>
+                    <span style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{S.fmt(x.amount)}</span>
+                  </div>
+                </Row>
+              ))}
+            </div>
+          </Modal>
 
           <PersonSpendCard rows={people} />
 
