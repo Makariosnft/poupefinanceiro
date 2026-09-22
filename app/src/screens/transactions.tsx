@@ -346,6 +346,8 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const prev = S.totalsFor(state, S.addMonths(month, -1), personId);
   const [q, setQ] = React.useState('');
   const [catFilter, setCatFilter] = React.useState('');
+  const [typeFilter, setTypeFilter] = React.useState('');
+  const [personFilter, setPersonFilter] = React.useState('');
 
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
@@ -356,6 +358,9 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   let list = t.items.comuns;
   if (q.trim()) list = list.filter(x => x.desc.toLowerCase().includes(q.toLowerCase()));
   if (catFilter) list = list.filter(x => x.categoryId === catFilter);
+  if (typeFilter) list = list.filter(x => x.typeId === typeFilter);
+  if (personFilter) list = list.filter(x => x.personId === personFilter);
+  const filtersActive = Boolean(q.trim() || catFilter || typeFilter || personFilter);
   const listTotal = list.reduce((s, x) => s + Number(x.amount), 0);
 
   const cats: Record<string, number> = {};
@@ -383,14 +388,18 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
 
           <Card style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <CardTitle sub="somente lançamentos do tipo Comum" right={
-              <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-                <Input value={q} onChange={setQ} placeholder="buscar…" style={{ width: 130, padding: '6px 10px', fontSize: 12 }} />
-                <Select value={catFilter} onChange={setCatFilter} options={catOptions(state)} placeholder="todas" style={{ width: 130 }} />
-              </div>
-            }>Lançamentos comuns</CardTitle>
+            <CardTitle sub="somente lançamentos do tipo Comum">Lançamentos comuns</CardTitle>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 10 }}>
+              <Input value={q} onChange={setQ} placeholder="buscar…" style={{ flex: '1 1 110px', minWidth: 100, padding: '6px 10px', fontSize: 12 }} />
+              <Select value={catFilter} onChange={setCatFilter} options={catOptions(state)} placeholder="categoria" style={{ flex: '1 1 120px', minWidth: 110 }} />
+              <Select value={typeFilter} onChange={setTypeFilter} options={typeOptions(state)} placeholder="pagamento" style={{ flex: '1 1 120px', minWidth: 110 }} />
+              <Select value={personFilter} onChange={setPersonFilter} options={personOptions(state)} placeholder="pessoa" style={{ flex: '1 1 100px', minWidth: 100 }} />
+              {filtersActive && (
+                <Button variant="ghost" size="sm" onClick={() => { setQ(''); setCatFilter(''); setTypeFilter(''); setPersonFilter(''); }}>limpar</Button>
+              )}
+            </div>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-              {list.length === 0 ? <EmptyState icon="🔍" title="Nada encontrado" hint="Ajuste a busca ou o filtro de categoria." /> :
+              {list.length === 0 ? <EmptyState icon="🔍" title="Nada encontrado" hint="Ajuste a busca ou os filtros." /> :
                 list.map((tx, i) => {
                   const info = invoiceInfo(tx);
                   return (
