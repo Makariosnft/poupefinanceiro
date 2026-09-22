@@ -782,10 +782,21 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const [adjAmount, setAdjAmount] = React.useState('');
   const [adjNote, setAdjNote] = React.useState('');
   const adjustPerson = state.people.find(p => p.id === adjustFor);
+  const hasOverrideThisMonth = adjustFor ? state.balanceAdjustments.some(a => a.personId === adjustFor && a.month === month) : false;
+  const openAdjust = (personId: string, currentBalance: number) => {
+    setAdjustFor(personId);
+    setAdjAmount(currentBalance.toFixed(2));
+    setAdjNote('');
+  };
   const saveAdjustment = () => {
     const n = Number(adjAmount.replace(',', '.'));
-    if (!adjustFor || !n) return;
-    actions.addBalanceAdjustment(adjustFor, month, n, adjNote.trim() || undefined);
+    if (!adjustFor || adjAmount.trim() === '' || Number.isNaN(n)) return;
+    actions.setBalanceOverride(adjustFor, month, n, adjNote.trim() || undefined);
+    setAdjustFor(null); setAdjAmount(''); setAdjNote('');
+  };
+  const clearAdjustment = () => {
+    if (!adjustFor) return;
+    actions.clearBalanceOverride(adjustFor, month);
     setAdjustFor(null); setAdjAmount(''); setAdjNote('');
   };
   const openType = types.find(r => r.type.id === openTypeId);
@@ -887,7 +898,7 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontWeight: 700, fontSize: 13, color: bal >= 0 ? green : red }}>{S.fmt(bal)}</span>
-                    <IconBtn onClick={() => setAdjustFor(p.id)} title={`Ajustar saldo de ${p.name}`} size={22}>✎</IconBtn>
+                    <IconBtn onClick={() => openAdjust(p.id, bal)} title={`Ajustar saldo de ${p.name}`} size={22}>✎</IconBtn>
                   </div>
                 </div>
               );
@@ -900,16 +911,17 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
 
           <Modal open={!!adjustFor} onClose={() => setAdjustFor(null)} title={`Ajustar saldo de ${adjustPerson?.name || ''}`} width={380}>
             <div style={{ fontSize: 12, color: muted, marginBottom: 14 }}>
-              Some ou subtrai um valor do saldo acumulado de {adjustPerson?.name} a partir de {S.monthLabel(month).toLowerCase()} — útil quando sobrou (ou faltou) dinheiro que não foi lançado no site.
+              O valor abaixo substitui o saldo acumulado de {adjustPerson?.name} em {S.monthLabel(month).toLowerCase()} — os meses seguintes continuam a partir dele. Útil quando o saldo real não bate com o que foi lançado no site.
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <Field label="valor (negativo pra subtrair)">
-                <Input type="number" value={adjAmount} onChange={setAdjAmount} placeholder="ex: 150 ou -80" onEnter={saveAdjustment} />
+              <Field label="novo saldo acumulado">
+                <Input type="number" value={adjAmount} onChange={setAdjAmount} placeholder="0,00" onEnter={saveAdjustment} />
               </Field>
               <Field label="nota (opcional)">
-                <Input value={adjNote} onChange={setAdjNote} placeholder="ex: sobrou do mês passado" onEnter={saveAdjustment} />
+                <Input value={adjNote} onChange={setAdjNote} placeholder="ex: saldo real da conta" onEnter={saveAdjustment} />
               </Field>
-              <Button onClick={saveAdjustment} disabled={!adjAmount || !Number(adjAmount.replace(',', '.'))}>Salvar ajuste</Button>
+              <Button onClick={saveAdjustment} disabled={adjAmount.trim() === ''}>Salvar</Button>
+              {hasOverrideThisMonth && <Button variant="ghost" tone={red} onClick={clearAdjustment}>Remover ajuste — voltar ao automático</Button>}
             </div>
           </Modal>
 

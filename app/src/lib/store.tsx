@@ -295,11 +295,22 @@ function buildActions(
       });
     },
 
-    addBalanceAdjustment: (personId: string, month: string, amount: number, note?: string) => {
-      balanceAdjustments.add({ personId, month, amount, note });
-      toast('Saldo ajustado');
+    setBalanceOverride: (personId: string, month: string, amount: number, note?: string) => {
+      lists.setBalanceAdjustments(l => {
+        const existing = l.find(x => x.personId === personId && x.month === month);
+        if (existing) balanceAdjustments.update(existing.id, { amount, note });
+        else balanceAdjustments.add({ personId, month, amount, note });
+        return l;
+      });
+      toast('Saldo acumulado ajustado');
     },
-    delBalanceAdjustment: (id: string) => { balanceAdjustments.remove(id); toast('Ajuste removido', 'warn'); },
+    clearBalanceOverride: (personId: string, month: string) => {
+      lists.setBalanceAdjustments(l => {
+        const existing = l.find(x => x.personId === personId && x.month === month);
+        if (existing) { balanceAdjustments.remove(existing.id); toast('Ajuste removido — voltou ao automático', 'warn'); }
+        return l;
+      });
+    },
   };
 }
 
@@ -613,21 +624,29 @@ function accountStartMonth(state: AppState): string | null {
   return monthOf(dates.reduce((a, b) => (a < b ? a : b)));
 }
 
-// Saldo acumulado (entradas - gastos de cada mês, + ajustes manuais) desde
-// o início dos dados até o mês informado. 'all' soma a casa inteira.
-export function cumulativeBalance(state: AppState, month: string, personId = 'all'): number {
+// Saldo acumulado de uma pessoa: soma entradas - gastos mês a mês desde o
+// início dos dados. Se existe um ajuste manual num mês, o saldo acumulado
+// PULA pra esse valor exato naquele mês (substitui, não soma) e os meses
+// seguintes continuam a partir dali.
+function personCumulativeBalance(state: AppState, month: string, personId: string): number {
   const start = accountStartMonth(state);
   if (!start) return 0;
   let total = 0;
   let m = start;
   while (monthDiff(m, month) >= 0) {
-    total += totalsFor(state, m, personId).balance;
-    total += state.balanceAdjustments
-      .filter(a => a.month === m && (personId === 'all' || a.personId === personId))
-      .reduce((s, a) => s + Number(a.amount || 0), 0);
+    const override = state.balanceAdjustments.find(a => a.month === m && a.personId === personId);
+    if (override) total = Number(override.amount);
+    else total += totalsFor(state, m, personId).balance;
     m = addMonths(m, 1);
   }
   return total;
+}
+
+// 'all' soma o saldo acumulado de cada pessoa (cada uma com seus próprios
+// ajustes/meses, já que os saldos de cada um são independentes).
+export function cumulativeBalance(state: AppState, month: string, personId = 'all'): number {
+  if (personId !== 'all') return personCumulativeBalance(state, month, personId);
+  return state.people.reduce((s, p) => s + personCumulativeBalance(state, month, p.id), 0);
 }
 
 export function healthScore(state: AppState, month: string) {
