@@ -3,7 +3,7 @@ import * as S from '../lib/store';
 import { useStore } from '../lib/store';
 import {
   Button, IconBtn, Field, Input, MoneyInput, Select, Chip, Card, CardTitle, Bar, Donut,
-  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, tokens,
+  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, PersonSpendCard, tokens,
 } from '../components/ui';
 import type { AppState, TxKind } from '../lib/types';
 
@@ -58,7 +58,9 @@ function useTxForm(defaultKind: TxKind = 'comum') {
 }
 type TxForm = ReturnType<typeof useTxForm>;
 
-function catOptions(state: AppState) { return state.categories.map(c => ({ value: c.id, label: c.name })); }
+function catOptions(state: AppState) {
+  return state.categories.map(c => ({ value: c.id, label: c.name })).sort((a, b) => a.label.localeCompare(b.label, 'pt-BR'));
+}
 function typeOptions(state: AppState) { return state.paymentTypes.map(t => ({ value: t.id, label: t.kind === 'card' ? `💳 ${t.name}` : t.name })); }
 // Entradas não têm seletor de categoria (é sempre salário/renda extra) — usa a categoria "Salário" automaticamente.
 function incomeCategoryId(state: AppState) { return state.categories.find(c => /sal[aá]rio/i.test(c.name))?.id || state.categories[0]?.id || ''; }
@@ -214,11 +216,9 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
               <Field label="quem"><Select value={g.personId} onChange={g.setPersonId} options={personOptions(state)} placeholder="—" /></Field>
               <Button onClick={saveGasto} disabled={!g.valid} style={{ height: 38 }}>add</Button>
             </div>
-            {(g.kind === 'fixo' || g.kind === 'parcelamento') && (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 10 }}>
-                <KindExtraFields f={g} />
-              </div>
-            )}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 10 }}>
+              <KindExtraFields f={g} />
+            </div>
           </Card>
 
           <Card>
@@ -538,7 +538,6 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
 
   const addFixo = () => { if (!f.valid) return; actions.addTx({ ...f.build(month), kind: 'fixo' }); f.reset(); setAdding(false); };
 
-  const byTypeRows = S.byType(state, month, personId).slice(0, 6);
   const people = S.byPerson(state, month);
 
   return (
@@ -616,36 +615,7 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
             <Bar pct={all.length ? (all.filter(r => r.paid).length / all.length) * 100 : 0} color={green} />
           </Card>
 
-          <Card pad={12}>
-            <CardTitle sub="do mês inteiro">Saídas por pagamento</CardTitle>
-            {byTypeRows.length === 0 ? <EmptyState icon="💳" title="Sem dados" /> : byTypeRows.map(r => (
-              <div key={r.type.id} style={{ marginBottom: 8 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span><span style={{ width: 8, height: 8, borderRadius: 99, background: r.type.color, display: 'inline-block', marginRight: 6 }} />{r.type.name}</span>
-                  <span style={{ fontWeight: 700 }}>{S.fmt0(r.value)}</span>
-                </div>
-                <Bar pct={(r.value / (byTypeRows[0]?.value || 1)) * 100} color={r.type.color} height={5} />
-              </div>
-            ))}
-          </Card>
-
-          <Card pad={12}>
-            <CardTitle sub="gasto total do mês">Por pessoa</CardTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(people.length, 2)}, 1fr)`, gap: 10 }}>
-              {people.map(p => {
-                const total = people.reduce((s, x) => s + x.value, 0) || 1;
-                return (
-                  <div key={p.person.id} style={{ textAlign: 'center', padding: 9, border: `1.4px dashed ${ink2}66`, borderRadius: 9 }}>
-                    <div style={{ display: 'grid', placeItems: 'center' }}>
-                      <Donut pct={(p.value / total) * 100} size={54} color={p.person.color} stroke={5} />
-                    </div>
-                    <div style={{ marginTop: 6, fontWeight: 700, fontSize: 13 }}>{p.person.name}</div>
-                    <div style={{ fontSize: 11, color: muted }}>{S.fmt0(p.value)}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </Card>
+          <PersonSpendCard rows={people} />
         </div>
       </div>
       <FAB onClick={onOpenModal} />
@@ -691,8 +661,7 @@ export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
 
   const add = () => { if (!f.valid) return; actions.addTx({ ...f.build(month), kind: 'parcelamento' }); f.reset(); setAdding(false); };
 
-  const perPerson = state.people.map(p => ({ p, v: rows.filter(r => r.personId === p.id).reduce((s, r) => s + Number(r.amount), 0) }));
-  const maxPP = Math.max(1, ...perPerson.map(x => x.v));
+  const perPerson = state.people.map(p => ({ person: p, value: rows.filter(r => r.personId === p.id).reduce((s, r) => s + Number(r.amount), 0) }));
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
@@ -795,17 +764,7 @@ export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
               })}
           </Card>
 
-          <Card pad={12}>
-            <CardTitle sub="compromisso mensal">Por pessoa</CardTitle>
-            {perPerson.map(x => (
-              <div key={x.p.id} style={{ marginBottom: 9 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
-                  <span>{x.p.name}</span><span style={{ fontWeight: 700 }}>{S.fmt0(x.v)}/mês</span>
-                </div>
-                <Bar pct={(x.v / maxPP) * 100} color={x.p.color} height={6} />
-              </div>
-            ))}
-          </Card>
+          <PersonSpendCard rows={perPerson} sub="compromisso mensal" />
         </div>
       </div>
 

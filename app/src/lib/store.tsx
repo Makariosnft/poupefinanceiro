@@ -38,7 +38,7 @@ export const monthLabel = (m: string) => `${MONTHS_FULL[Number(m.slice(5, 7)) - 
 export const monthShort = (m: string) => `${MONTHS_PT[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
 export const fmt = (n: number) =>
   'R$ ' + (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-export const fmt0 = (n: number) => 'R$ ' + Math.round(n || 0).toLocaleString('pt-BR');
+export const fmt0 = fmt;
 export const dayLabel = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS_PT[Number(iso.slice(5, 7)) - 1].toLowerCase()}`;
 
 function loadUiPrefs() {

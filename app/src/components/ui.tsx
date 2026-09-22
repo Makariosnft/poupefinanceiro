@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from '../assets/poupe-logo.png';
-import { useStore, MONTHS_PT, addMonths, monthLabel } from '../lib/store';
-import type { Toast } from '../lib/types';
+import { useStore, MONTHS_PT, addMonths, monthLabel, fmt } from '../lib/store';
+import type { Toast, Person } from '../lib/types';
 
 export const ink = '#1a1815';
 export const ink2 = '#4a463f';
@@ -608,6 +608,25 @@ export function Row({ children, onDelete, style = {}, last }: RowProps) {
         </span>
       )}
     </div>
+  );
+}
+
+// ── Cartão padrão "Gasto por pessoa" (Fixos, Parcelamentos, Resumo) ─
+export function PersonSpendCard({ rows, sub = 'gasto total do mês' }: { rows: { person: Person; value: number }[]; sub?: string }) {
+  const max = Math.max(1, ...rows.map(r => r.value));
+  return (
+    <Card pad={12}>
+      <CardTitle sub={sub}>Gasto por pessoa</CardTitle>
+      {rows.length === 0 ? <EmptyState icon="👥" title="Sem dados" /> : rows.map(r => (
+        <div key={r.person.id} style={{ marginBottom: 9 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+            <span><span style={{ width: 8, height: 8, borderRadius: 99, background: r.person.color, display: 'inline-block', marginRight: 6 }} />{r.person.name}</span>
+            <span style={{ fontWeight: 700 }}>{fmt(r.value)}</span>
+          </div>
+          <Bar pct={(r.value / max) * 100} color={r.person.color} height={5} />
+        </div>
+      ))}
+    </Card>
   );
 }
 

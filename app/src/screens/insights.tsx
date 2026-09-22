@@ -3,7 +3,7 @@ import * as S from '../lib/store';
 import { useStore } from '../lib/store';
 import {
   Button, IconBtn, Field, Input, MoneyInput, Select, Chip, Card, CardTitle, Bar,
-  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, tokens,
+  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, PersonSpendCard, tokens,
 } from '../components/ui';
 import type { Debt, Goal } from '../lib/types';
 
@@ -790,7 +790,7 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
               {months.map(x => {
                 const on = x.m === month;
                 return (
-                  <div key={x.m} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 0 }}>
+                  <div key={x.m} style={{ flex: 1, height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, minWidth: 0 }}>
                     <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: 3, width: '100%', justifyContent: 'center' }}>
                       <div title={`entradas ${S.fmt0(x.income)}`} style={{ width: '38%', height: `${(x.income / maxBar) * 100}%`, background: green, borderRadius: '3px 3px 0 0', opacity: on ? 1 : 0.5, transition: 'height .5s, opacity .2s', minHeight: 2 }} />
                       <div title={`gastos ${S.fmt0(x.expenses)}`} style={{ width: '38%', height: `${(x.expenses / maxBar) * 100}%`, background: red, borderRadius: '3px 3px 0 0', opacity: on ? 1 : 0.5, transition: 'height .5s, opacity .2s', minHeight: 2 }} />
@@ -844,6 +844,21 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
               ))}
             </div>
           </Card>
+
+          <Card pad={12} style={{ flexShrink: 0 }}>
+            <CardTitle sub="do mês inteiro">Saídas por pagamento</CardTitle>
+            {types.length === 0 ? <EmptyState icon="💳" title="Sem dados" /> : types.slice(0, 6).map(r => (
+              <div key={r.type.id} style={{ marginBottom: 8 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                  <span><span style={{ width: 8, height: 8, borderRadius: 99, background: r.type.color, display: 'inline-block', marginRight: 6 }} />{r.type.name}</span>
+                  <span style={{ fontWeight: 700 }}>{S.fmt(r.value)}</span>
+                </div>
+                <Bar pct={(r.value / (types[0]?.value || 1)) * 100} color={r.type.color} height={5} />
+              </div>
+            ))}
+          </Card>
+
+          <PersonSpendCard rows={people} />
 
           <Card pad={12} style={{ flex: 1, minHeight: 170, display: 'flex', flexDirection: 'column' }}>
             <CardTitle sub="onde mais saiu dinheiro">Maiores gastos</CardTitle>
