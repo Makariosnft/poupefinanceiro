@@ -24,7 +24,8 @@ function ContaFields() {
   const code = state.account?.inviteCode || '';
 
   const copy = async () => {
-    try { await navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 1600); }
+    const message = `Vem organizar as finanças comigo no Poupê! Acesse ${window.location.origin}, crie sua conta e entre com o código de convite: ${code}`;
+    try { await navigator.clipboard.writeText(message); setCopied(true); setTimeout(() => setCopied(false), 1600); }
     catch { toast('Não deu pra copiar automaticamente — selecione o código manualmente', 'warn'); }
   };
 
@@ -39,7 +40,7 @@ function ContaFields() {
             padding: '9px 16px', border: `1.4px solid ${ink}`, borderRadius: 9, background: paper,
             fontSize: 18, fontWeight: 800, letterSpacing: '0.1em', fontFamily: 'monospace',
           }}>{code}</div>
-          <Button variant="outline" size="sm" onClick={copy}>{copied ? 'copiado ✓' : 'copiar'}</Button>
+          <Button variant="outline" size="sm" onClick={copy}>{copied ? 'copiado ✓' : 'copiar convite'}</Button>
         </div>
       </div>
 

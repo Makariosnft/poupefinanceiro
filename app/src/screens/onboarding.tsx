@@ -193,10 +193,11 @@ export function AccountChoice({ onCreate, onJoin }: { onCreate: () => void; onJo
 }
 
 export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
-  const { state, actions } = useStore();
+  const { state, actions, toast } = useStore();
   const [name, setName] = React.useState('');
   const [loading, setLoading] = React.useState(false);
   const [code, setCode] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
 
   const create = async () => {
     if (!name.trim()) return;
@@ -204,6 +205,12 @@ export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void;
     const id = await actions.createAccount(name.trim());
     setLoading(false);
     if (id) setCode(state.account?.inviteCode ?? null);
+  };
+
+  const copyInvite = async () => {
+    const message = `Vem organizar as finanças comigo no Poupê! Acesse ${window.location.origin}, crie sua conta e entre com o código de convite: ${code}`;
+    try { await navigator.clipboard.writeText(message); setCopied(true); setTimeout(() => setCopied(false), 1600); }
+    catch { toast('Não deu pra copiar automaticamente — selecione o código manualmente', 'warn'); }
   };
 
   if (code) {
@@ -216,6 +223,7 @@ export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void;
           marginTop: 4, padding: '16px 28px', border: `1.6px solid ${ink}`, borderRadius: 12, background: paper2,
           fontSize: 30, fontWeight: 800, letterSpacing: '0.12em', fontFamily: 'monospace',
         }}>{code}</div>
+        <Button variant="outline" onClick={copyInvite}>{copied ? 'copiado ✓' : 'copiar convite'}</Button>
         <Button size="lg" onClick={onCreated}>Continuar →</Button>
       </AccountFrame>
     );
