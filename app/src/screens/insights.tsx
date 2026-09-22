@@ -751,7 +751,7 @@ export function Metas({ onNavigate, onOpenModal }: ScreenProps) {
 
 // ── Tela: Relatórios ───────────────────────────────────────────────
 export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
-  const { state } = useStore();
+  const { state, actions } = useStore();
   const { month, personId } = state.ui;
   const [view, setView] = React.useState<'categoria' | 'pagamento' | 'pessoa'>('categoria');
 
@@ -774,9 +774,9 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
 
-  const rows = view === 'categoria' ? cats.map(r => ({ label: r.cat.name, color: r.cat.color, value: r.value, expected: r.cat.expectedAmount }))
-    : view === 'pagamento' ? types.map(r => ({ label: r.type.name, color: r.type.color, value: r.value, expected: undefined as number | undefined }))
-    : people.map(r => ({ label: r.person.name, color: r.person.color, value: r.value, expected: undefined as number | undefined }));
+  const rows = view === 'categoria' ? cats.map(r => ({ id: r.cat.id, label: r.cat.name, color: r.cat.color, value: r.value, expected: r.cat.expectedAmount }))
+    : view === 'pagamento' ? types.map(r => ({ id: r.type.id, label: r.type.name, color: r.type.color, value: r.value, expected: undefined as number | undefined }))
+    : people.map(r => ({ id: r.person.id, label: r.person.name, color: r.person.color, value: r.value, expected: undefined as number | undefined }));
   const rowsTotal = rows.reduce((s, r) => s + r.value, 0) || 1;
 
   return (
@@ -820,9 +820,16 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
                           <span style={{ width: 8, height: 8, borderRadius: 99, background: r.color, display: 'inline-block', marginRight: 7 }} />{r.label}
                           {over && <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 800, color: red, letterSpacing: '0.04em', textTransform: 'uppercase' }}>acima do esperado</span>}
                         </span>
-                        <span style={{ display: 'flex', gap: 10, flexShrink: 0, alignItems: 'baseline' }}>
+                        <span style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
                           <span style={{ color: muted, fontSize: 11 }}>{Math.round((r.value / rowsTotal) * 100)}%</span>
-                          {r.expected != null && <span style={{ color: muted, fontSize: 10.5 }}>/ {S.fmt(r.expected)}</span>}
+                          {view === 'categoria' && (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                              <span style={{ fontSize: 9, color: muted }}>meta</span>
+                              <input type="number" min={0} step="0.01" value={r.expected ?? ''} placeholder="—"
+                                onChange={e => actions.updateCategory(r.id, { expectedAmount: e.target.value ? Number(e.target.value) : undefined })}
+                                style={{ width: 56, padding: '2px 4px', borderRadius: 5, border: `1px solid ${ink2}55`, background: paper, fontSize: 10.5, fontWeight: 700, color: ink }} />
+                            </span>
+                          )}
                           <span style={{ fontWeight: 700, color: over ? red : ink }}>{S.fmt(r.value)}</span>
                         </span>
                       </div>
