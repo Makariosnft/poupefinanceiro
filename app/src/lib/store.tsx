@@ -126,7 +126,11 @@ function buildActions(
 
     signUp: async (email: string, password: string) => {
       const { data, error } = await supabase.auth.signUp({ email, password });
-      if (error) { toast(error.message, 'error'); return; }
+      if (error) {
+        const blocked = /signup_not_allowed|database error saving new user/i.test(error.message);
+        toast(blocked ? 'Esse e-mail ainda não foi liberado para testar o Poupê. Peça pra quem te convidou liberar seu acesso.' : error.message, 'error');
+        return;
+      }
       if (!data.session) toast('Verifique seu e-mail para confirmar a conta.', 'warn');
     },
     signIn: async (email: string, password: string) => {
