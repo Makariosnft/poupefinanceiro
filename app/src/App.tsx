@@ -2,7 +2,7 @@ import React from 'react';
 import { StoreProvider, useStore } from './lib/store';
 import { Toaster } from './components/ui';
 import { Lancamentos, GastosDoMes, GanhosDoMes, Fixos, Parcelamentos, QuickAddModal } from './screens/transactions';
-import { Diagnostico, Dividas, Metas, Relatorios } from './screens/insights';
+import { Dividas, Metas, Relatorios } from './screens/insights';
 import { CaixinhaScreen } from './screens/caixinha';
 import {
   Login, AccountChoice, CreateAccountScreen, JoinAccountScreen,
@@ -16,7 +16,6 @@ const SCREENS: Record<string, React.ComponentType<{ onNavigate: (t: string) => v
   'Gastos do mês': GastosDoMes,
   'Fixos': Fixos,
   'Parcelamentos': Parcelamentos,
-  'Diagnóstico': Diagnostico,
   'Dívidas': Dividas,
   'Metas': Metas,
   'Caixinha': CaixinhaScreen,
