@@ -72,6 +72,19 @@ export interface UIState {
   accountChecked: boolean; // true once we've determined accountId (found or not) for the current session
 }
 
+export interface Caixinha {
+  id: string;
+  description: string;
+}
+
+export interface CaixinhaMovement {
+  id: string;
+  caixinhaId: string;
+  amount: number; // positivo = aporte, negativo = retirada
+  description: string;
+  date: string; // YYYY-MM-DD
+}
+
 export interface Account {
   id: string;
   name: string;
@@ -85,6 +98,8 @@ export interface AppState {
   transactions: Transaction[];
   debts: Debt[];
   goals: Goal[];
+  caixinha: Caixinha | null;
+  caixinhaMovements: CaixinhaMovement[];
   account: Account | null;
   ui: UIState;
 }

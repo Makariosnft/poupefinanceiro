@@ -416,7 +416,7 @@ export function KindSwitch({ value, onChange, size = 'sm', options }: KindSwitch
 }
 
 // ── Chrome: barra superior + linha do tempo de meses ───────────────
-export const TABS = ['Lançamentos', 'Ganhos do mês', 'Gastos do mês', 'Fixos', 'Parcelamentos', 'Diagnóstico', 'Dívidas', 'Metas', 'Resumo'];
+export const TABS = ['Lançamentos', 'Ganhos do mês', 'Gastos do mês', 'Fixos', 'Parcelamentos', 'Diagnóstico', 'Dívidas', 'Metas', 'Caixinha', 'Resumo'];
 
 export function TopBar({ activeTab, onNavigate }: { activeTab: string; onNavigate: (tab: string) => void }) {
   const { state, actions } = useStore();

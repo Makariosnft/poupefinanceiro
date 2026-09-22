@@ -1,4 +1,4 @@
-import type { Category, Debt, Goal, PaymentType, Person, Transaction } from './types';
+import type { Caixinha, CaixinhaMovement, Category, Debt, Goal, PaymentType, Person, Transaction } from './types';
 
 // Each data table has a camelCase (app) <-> snake_case (db) field map.
 // `id` and `account_id` are handled separately, not part of these maps.
@@ -13,12 +13,15 @@ export const TX_MAP = {
 } as const;
 export const DEBTS_MAP = { name: 'name', total: 'total', paid: 'paid', rate: 'rate', min: 'min', personId: 'person_id', color: 'color' } as const;
 export const GOALS_MAP = { name: 'name', emoji: 'emoji', target: 'target', current: 'current', color: 'color', personId: 'person_id' } as const;
+export const CAIXINHA_MAP = { description: 'description' } as const;
+export const CAIXINHA_MOVEMENTS_MAP = { caixinhaId: 'caixinha_id', amount: 'amount', description: 'description', date: 'date' } as const;
 
 const NUMERIC_FIELDS: Record<string, string[]> = {
   transactions: ['amount'],
   debts: ['total', 'paid', 'rate', 'min'],
   goals: ['target', 'current'],
   categories: ['expectedAmount'],
+  caixinha_movements: ['amount'],
 };
 
 type FieldMap = Record<string, string>;
@@ -53,5 +56,7 @@ export const paymentTypesFromRow = (r: Record<string, any>): PaymentType => rowT
 export const txFromRow = (r: Record<string, any>): Transaction => rowToModel(r, TX_MAP, 'transactions');
 export const debtsFromRow = (r: Record<string, any>): Debt => rowToModel(r, DEBTS_MAP, 'debts');
 export const goalsFromRow = (r: Record<string, any>): Goal => rowToModel(r, GOALS_MAP, 'goals');
+export const caixinhaFromRow = (r: Record<string, any>): Caixinha => rowToModel(r, CAIXINHA_MAP, 'caixinha');
+export const caixinhaMovementsFromRow = (r: Record<string, any>): CaixinhaMovement => rowToModel(r, CAIXINHA_MOVEMENTS_MAP, 'caixinha_movements');
 
-export const DATA_TABLES = ['people', 'categories', 'payment_types', 'transactions', 'debts', 'goals'] as const;
+export const DATA_TABLES = ['people', 'categories', 'payment_types', 'transactions', 'debts', 'goals', 'caixinha', 'caixinha_movements'] as const;

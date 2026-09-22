@@ -3,6 +3,7 @@ import { StoreProvider, useStore } from './lib/store';
 import { Toaster } from './components/ui';
 import { Lancamentos, GastosDoMes, GanhosDoMes, Fixos, Parcelamentos, QuickAddModal } from './screens/transactions';
 import { Diagnostico, Dividas, Metas, Relatorios } from './screens/insights';
+import { CaixinhaScreen } from './screens/caixinha';
 import {
   Login, AccountChoice, CreateAccountScreen, JoinAccountScreen,
   People, Categories, PaymentTypes, Done, type OnbStepProps,
@@ -18,6 +19,7 @@ const SCREENS: Record<string, React.ComponentType<{ onNavigate: (t: string) => v
   'Diagnóstico': Diagnostico,
   'Dívidas': Dividas,
   'Metas': Metas,
+  'Caixinha': CaixinhaScreen,
   'Resumo': Relatorios,
   'Configurações': Settings,
 };
