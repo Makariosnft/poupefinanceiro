@@ -44,7 +44,7 @@ export function Login() {
               Suas finanças, organizadas em um só lugar.
             </div>
             <div style={{ fontSize: 14, opacity: 0.75, marginTop: 14, maxWidth: 370, lineHeight: 1.55 }}>
-              Lance gastos e ganhos em segundos, acompanhe despesas, metas e investimentos - sozinho, a dois ou com a família.
+              Lance gastos e ganhos em segundos, acompanhe despesas, metas e investimentos - sozinho, a dois ou em família.
             </div>
             <div style={{ display: 'flex', gap: 18, fontSize: 11.5, opacity: 0.55, marginTop: 40 }}>
               <span>© 2026 Poupê</span><span>Privacidade</span><span>Termos</span>
