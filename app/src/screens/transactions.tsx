@@ -777,7 +777,7 @@ export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
                             <span style={{ width: 8, height: 8, borderRadius: 99, background: color, flexShrink: 0 }} />
                             <span style={{ fontWeight: 700, fontSize: 13.5, letterSpacing: '-0.01em' }}>{r.desc}</span>
                             <span style={{ fontSize: 10.5, color: muted }}>{personName(r.personId)} · {typeName(r.typeId)}</span>
-                            {left <= 1 && <span style={{ padding: '1px 7px', background: green, color: paper, borderRadius: 99, fontSize: 9, fontWeight: 800, letterSpacing: '0.05em' }}>ÚLTIMA</span>}
+                            {left === 0 && <span style={{ padding: '1px 7px', background: green, color: paper, borderRadius: 99, fontSize: 9, fontWeight: 800, letterSpacing: '0.05em' }}>ÚLTIMA</span>}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 7 }}>
                             <div style={{ flex: 1 }}><Bar pct={pct} color={color} height={5} /></div>
