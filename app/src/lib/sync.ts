@@ -4,7 +4,7 @@ import type { Category, Debt, Goal, PaymentType, Person, Transaction } from './t
 // `id` and `account_id` are handled separately, not part of these maps.
 
 export const PEOPLE_MAP = { name: 'name', color: 'color' } as const;
-export const CATEGORIES_MAP = { name: 'name', color: 'color' } as const;
+export const CATEGORIES_MAP = { name: 'name', color: 'color', expectedAmount: 'expected_amount' } as const;
 export const PAYMENT_TYPES_MAP = { name: 'name', kind: 'kind', color: 'color', closing: 'closing', due: 'due' } as const;
 export const TX_MAP = {
   kind: 'kind', desc: 'description', amount: 'amount', categoryId: 'category_id', typeId: 'type_id',
@@ -18,6 +18,7 @@ const NUMERIC_FIELDS: Record<string, string[]> = {
   transactions: ['amount'],
   debts: ['total', 'paid', 'rate', 'min'],
   goals: ['target', 'current'],
+  categories: ['expectedAmount'],
 };
 
 type FieldMap = Record<string, string>;

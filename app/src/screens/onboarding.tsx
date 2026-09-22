@@ -357,6 +357,12 @@ export function CategoriesFields() {
               }}>
                 <span style={{ width: 19, height: 19, borderRadius: 99, background: c.color, flexShrink: 0 }} />
                 {c.name}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, marginLeft: 2 }}>
+                  <span style={{ fontSize: 9.5, color: muted, fontWeight: 600 }}>esperado</span>
+                  <input type="number" min={0} step="0.01" value={c.expectedAmount ?? ''} placeholder="—"
+                    onChange={e => actions.updateCategory(c.id, { expectedAmount: e.target.value ? Number(e.target.value) : undefined })}
+                    style={{ width: 58, padding: '2px 5px', borderRadius: 5, border: `1px solid ${c.color}55`, background: paper, fontSize: 10.5, fontWeight: 700, color: ink }} />
+                </span>
                 <span onClick={() => remove(c)} style={{ marginLeft: 1, opacity: 0.5, cursor: 'pointer', fontSize: 14 }}>×</span>
               </span>
             ))}

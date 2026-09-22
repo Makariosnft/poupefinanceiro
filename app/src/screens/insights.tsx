@@ -774,9 +774,9 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
 
-  const rows = view === 'categoria' ? cats.map(r => ({ label: r.cat.name, color: r.cat.color, value: r.value }))
-    : view === 'pagamento' ? types.map(r => ({ label: r.type.name, color: r.type.color, value: r.value }))
-    : people.map(r => ({ label: r.person.name, color: r.person.color, value: r.value }));
+  const rows = view === 'categoria' ? cats.map(r => ({ label: r.cat.name, color: r.cat.color, value: r.value, expected: r.cat.expectedAmount }))
+    : view === 'pagamento' ? types.map(r => ({ label: r.type.name, color: r.type.color, value: r.value, expected: undefined as number | undefined }))
+    : people.map(r => ({ label: r.person.name, color: r.person.color, value: r.value, expected: undefined as number | undefined }));
   const rowsTotal = rows.reduce((s, r) => s + r.value, 0) || 1;
 
   return (
@@ -811,20 +811,25 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
             }>{`Quebra por ${view}`}</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {rows.length === 0 ? <EmptyState icon="📊" title="Sem dados nesse mês" hint="Lance alguns gastos para ver o relatório." /> :
-                rows.map((r, i) => (
-                  <div key={i} style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12.5, marginBottom: 3, gap: 10 }}>
-                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        <span style={{ width: 8, height: 8, borderRadius: 99, background: r.color, display: 'inline-block', marginRight: 7 }} />{r.label}
-                      </span>
-                      <span style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
-                        <span style={{ color: muted, fontSize: 11 }}>{Math.round((r.value / rowsTotal) * 100)}%</span>
-                        <span style={{ fontWeight: 700 }}>{S.fmt(r.value)}</span>
-                      </span>
+                rows.map((r, i) => {
+                  const over = r.expected != null && r.value > r.expected;
+                  return (
+                    <div key={i} style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12.5, marginBottom: 3, gap: 10 }}>
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <span style={{ width: 8, height: 8, borderRadius: 99, background: r.color, display: 'inline-block', marginRight: 7 }} />{r.label}
+                          {over && <span style={{ marginLeft: 6, fontSize: 9.5, fontWeight: 800, color: red, letterSpacing: '0.04em', textTransform: 'uppercase' }}>acima do esperado</span>}
+                        </span>
+                        <span style={{ display: 'flex', gap: 10, flexShrink: 0, alignItems: 'baseline' }}>
+                          <span style={{ color: muted, fontSize: 11 }}>{Math.round((r.value / rowsTotal) * 100)}%</span>
+                          {r.expected != null && <span style={{ color: muted, fontSize: 10.5 }}>/ {S.fmt(r.expected)}</span>}
+                          <span style={{ fontWeight: 700, color: over ? red : ink }}>{S.fmt(r.value)}</span>
+                        </span>
+                      </div>
+                      <Bar pct={(r.value / (rows[0]?.value || 1)) * 100} color={over ? red : r.color} height={6} delay={i * 40} />
                     </div>
-                    <Bar pct={(r.value / (rows[0]?.value || 1)) * 100} color={r.color} height={6} delay={i * 40} />
-                  </div>
-                ))}
+                  );
+                })}
             </div>
             <div style={{ borderTop: `1.5px solid ${ink}`, marginTop: 8, paddingTop: 9, display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: 15 }}>
               <span>Total</span><span>{S.fmt(rowsTotal)}</span>
