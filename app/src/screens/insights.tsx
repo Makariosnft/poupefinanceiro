@@ -3,7 +3,7 @@ import * as S from '../lib/store';
 import { useStore } from '../lib/store';
 import {
   Button, IconBtn, Field, Input, MoneyInput, Select, Chip, Card, CardTitle, Bar,
-  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, PersonSpendCard, tokens,
+  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, PersonSpendCard, useIsMobile, tokens,
 } from '../components/ui';
 import type { Debt, Goal } from '../lib/types';
 
@@ -277,6 +277,7 @@ function simulatePayoff(debts: Debt[], strategy: 'avalanche' | 'bolaneve', extra
 // ── Tela: Dívidas ──────────────────────────────────────────────────
 export function Dividas({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const [strategy, setStrategy] = React.useState<'avalanche' | 'bolaneve'>('avalanche');
   const [extra, setExtra] = React.useState(0);
   const [addOpen, setAddOpen] = React.useState(false);
@@ -304,10 +305,10 @@ export function Dividas({ onNavigate, onOpenModal }: ScreenProps) {
   const doPay = () => { if (!payFor || !(Number(payAmt) > 0)) return; actions.payDebt(payFor.id, Number(payAmt)); setPayFor(null); setPayAmt(''); };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Dívidas" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12, padding: 16, overflow: 'hidden' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 12, flexShrink: 0 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12, padding: 16, overflow: isMobile ? 'visible' : 'hidden' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.55fr 1fr', gap: 12, flexShrink: 0 }}>
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
               <div style={{ minWidth: 0 }}>
@@ -351,7 +352,7 @@ export function Dividas({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1.55fr 1fr', gap: 12, flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.55fr 1fr', gap: 12, flex: 1, minHeight: 0 }}>
           <Card style={{ display: 'flex', flexDirection: 'column', minHeight: 0 }}>
             <CardTitle sub={`ordem ${strategy === 'avalanche' ? 'por taxa de juros' : 'por menor saldo'}`}
               right={<Button size="sm" variant="outline" onClick={() => setAddOpen(true)}>+ dívida</Button>}>Plano de quitação</CardTitle>
@@ -473,6 +474,7 @@ export function Dividas({ onNavigate, onOpenModal }: ScreenProps) {
 // ── Tela: Metas ────────────────────────────────────────────────────
 export function Metas({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const month = state.ui.month;
   const t = S.totalsFor(state, month);
   const [mode, setMode] = React.useState<'atual' | 'cortes' | 'turbo'>('atual');
@@ -535,9 +537,9 @@ export function Metas({ onNavigate, onOpenModal }: ScreenProps) {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Metas" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '200px 1fr 290px', gap: 13, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '200px 1fr 290px', gap: 13, padding: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minHeight: 0, overflow: 'auto' }}>
           <div style={{ fontSize: 9.5, color: muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, padding: '2px 2px' }}>suas metas</div>
           {goals.map(g => {
@@ -752,6 +754,7 @@ export function Metas({ onNavigate, onOpenModal }: ScreenProps) {
 // ── Tela: Relatórios ───────────────────────────────────────────────
 export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const { month, personId } = state.ui;
   const [view, setView] = React.useState<'categoria' | 'pagamento' | 'pessoa'>('categoria');
 
@@ -780,9 +783,9 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const rowsTotal = rows.reduce((s, r) => s + r.value, 0) || 1;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Resumo" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 16, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.5fr 1fr', gap: 16, padding: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
           <Card style={{ flexShrink: 0 }}>
             <CardTitle sub="entradas vs gastos nos últimos 6 meses">Evolução mensal</CardTitle>

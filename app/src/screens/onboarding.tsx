@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from '../assets/poupe-logo.png';
 import { useStore } from '../lib/store';
-import { Button, IconBtn, Field, Input, tokens } from '../components/ui';
+import { Button, IconBtn, Field, Input, useIsMobile, tokens } from '../components/ui';
 
 const { ink, ink2, muted, paper, paper2, green, blue } = tokens;
 
@@ -16,6 +16,7 @@ const BANK_PRESETS = [
 // ── Login ──────────────────────────────────────────────────────────
 export function Login() {
   const { actions } = useStore();
+  const isMobile = useIsMobile();
   const [email, setEmail] = React.useState('');
   const [pass, setPass] = React.useState('');
   const [mode, setMode] = React.useState<'entrar' | 'criar'>('entrar');
@@ -30,28 +31,31 @@ export function Login() {
   };
 
   return (
-    <div style={{ height: '100%', display: 'grid', gridTemplateColumns: '1fr 1fr', fontFamily: 'Montserrat, sans-serif', overflow: 'hidden' }}>
-      <div style={{
-        background: ink, color: paper, padding: 44, display: 'flex', flexDirection: 'column',
-        justifyContent: 'center', overflow: 'auto', minHeight: 0,
-        backgroundImage: 'radial-gradient(circle at 85% 12%, rgba(47,90,72,.38) 0%, transparent 46%), radial-gradient(circle at 8% 92%, rgba(58,106,138,.28) 0%, transparent 46%)',
-      }}>
-        <div>
-          <img src={logo} alt="Poupê" style={{ height: 50, width: 'auto', objectFit: 'contain', display: 'block', filter: 'invert(1) brightness(2)', marginBottom: 26 }} />
-          <div style={{ fontWeight: 800, fontSize: 33, letterSpacing: '-0.028em', lineHeight: 1.15, maxWidth: 400 }}>
-            Suas finanças, organizadas a dois.
-          </div>
-          <div style={{ fontSize: 14, opacity: 0.75, marginTop: 14, maxWidth: 370, lineHeight: 1.55 }}>
-            Lance gastos em segundos, acompanhe fixos, parcelas, dívidas e metas — tudo num só lugar, pra você e quem divide a vida com você.
-          </div>
-          <div style={{ display: 'flex', gap: 18, fontSize: 11.5, opacity: 0.55, marginTop: 40 }}>
-            <span>© 2026 Poupê</span><span>Privacidade</span><span>Termos</span>
+    <div style={{ height: '100%', display: isMobile ? 'block' : 'grid', gridTemplateColumns: isMobile ? undefined : '1fr 1fr', fontFamily: 'Montserrat, sans-serif', overflow: 'auto' }}>
+      {!isMobile && (
+        <div style={{
+          background: ink, color: paper, padding: 44, display: 'flex', flexDirection: 'column',
+          justifyContent: 'center', overflow: 'auto', minHeight: 0,
+          backgroundImage: 'radial-gradient(circle at 85% 12%, rgba(47,90,72,.38) 0%, transparent 46%), radial-gradient(circle at 8% 92%, rgba(58,106,138,.28) 0%, transparent 46%)',
+        }}>
+          <div>
+            <img src={logo} alt="Poupê" style={{ height: 50, width: 'auto', objectFit: 'contain', display: 'block', filter: 'invert(1) brightness(2)', marginBottom: 26 }} />
+            <div style={{ fontWeight: 800, fontSize: 33, letterSpacing: '-0.028em', lineHeight: 1.15, maxWidth: 400 }}>
+              Suas finanças, organizadas a dois.
+            </div>
+            <div style={{ fontSize: 14, opacity: 0.75, marginTop: 14, maxWidth: 370, lineHeight: 1.55 }}>
+              Lance gastos em segundos, acompanhe fixos, parcelas, dívidas e metas — tudo num só lugar, pra você e quem divide a vida com você.
+            </div>
+            <div style={{ display: 'flex', gap: 18, fontSize: 11.5, opacity: 0.55, marginTop: 40 }}>
+              <span>© 2026 Poupê</span><span>Privacidade</span><span>Termos</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ background: paper, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '44px 44px', overflow: 'auto', minHeight: 0 }}>
+      <div style={{ background: paper, display: 'flex', alignItems: isMobile ? 'center' : 'flex-start', justifyContent: 'center', padding: isMobile ? '32px 20px' : '44px 44px', minHeight: isMobile ? '100%' : 0 }}>
         <div style={{ width: '100%', maxWidth: 372, marginTop: 'auto', marginBottom: 'auto' }}>
+          {isMobile && <img src={logo} alt="Poupê" style={{ height: 34, width: 'auto', objectFit: 'contain', display: 'block', marginBottom: 22 }} />}
           <div style={{ fontWeight: 800, fontSize: 25, letterSpacing: '-0.022em' }}>{mode === 'entrar' ? 'Bem-vindo de volta' : 'Criar sua conta'}</div>
           <div style={{ fontSize: 13, color: muted, marginTop: 6 }}>
             {mode === 'entrar' ? 'Entre para continuar organizando suas finanças' : 'Comece grátis — leva menos de um minuto'}
@@ -103,17 +107,18 @@ interface ShellProps {
 }
 
 function Shell({ step, total = 5, eyebrow, title, sub, children, onNext, onBack, onSkip, nextLabel = 'continuar', nextTone, nextDisabled, hint }: ShellProps) {
+  const isMobile = useIsMobile();
   return (
     <div style={{
       height: '100%', display: 'flex', flexDirection: 'column', background: paper, color: ink,
       fontFamily: 'Montserrat, sans-serif', overflow: 'hidden',
       backgroundImage: 'radial-gradient(circle at 92% -8%, rgba(47,90,72,.07) 0%, transparent 42%), radial-gradient(circle at -8% 108%, rgba(58,106,138,.06) 0%, transparent 42%)',
     }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 28px', borderBottom: `1px dashed ${ink2}2e`, flexShrink: 0 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: isMobile ? '14px 16px' : '16px 28px', borderBottom: `1px dashed ${ink2}2e`, flexShrink: 0 }}>
         <img src={logo} alt="Poupê" style={{ height: 26, width: 'auto', objectFit: 'contain', display: 'block' }} />
         {step !== null && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span style={{ fontSize: 10.5, color: muted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>passo {step + 1} de {total}</span>
+            {!isMobile && <span style={{ fontSize: 10.5, color: muted, letterSpacing: '0.08em', textTransform: 'uppercase' }}>passo {step + 1} de {total}</span>}
             <div style={{ display: 'inline-flex', gap: 5, alignItems: 'center' }}>
               {Array.from({ length: total }, (_, i) => (
                 <span key={i} style={{ width: i === step ? 20 : 6, height: 6, borderRadius: 99, background: i <= step ? ink : '#00000020', transition: 'all .25s cubic-bezier(.2,.8,.3,1)' }} />
@@ -124,14 +129,14 @@ function Shell({ step, total = 5, eyebrow, title, sub, children, onNext, onBack,
         )}
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '26px 48px' }}>
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: isMobile ? '20px 16px' : '26px 48px' }}>
         {eyebrow && <div style={{ fontSize: 10.5, color: blue, letterSpacing: '0.14em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 9 }}>{eyebrow}</div>}
-        {title && <div style={{ fontWeight: 800, letterSpacing: '-0.026em', fontSize: 34, lineHeight: 1.1, maxWidth: 620 }}>{title}</div>}
+        {title && <div style={{ fontWeight: 800, letterSpacing: '-0.026em', fontSize: isMobile ? 24 : 34, lineHeight: 1.1, maxWidth: 620 }}>{title}</div>}
         {sub && <div style={{ fontSize: 14.5, color: ink2, marginTop: 11, lineHeight: 1.55, maxWidth: 560 }}>{sub}</div>}
         <div style={{ marginTop: 24 }}>{children}</div>
       </div>
 
-      <div style={{ padding: '15px 28px', borderTop: `1px dashed ${ink2}2e`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 12 }}>
+      <div style={{ padding: isMobile ? '12px 16px' : '15px 28px', borderTop: `1px dashed ${ink2}2e`, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0, gap: 12 }}>
         {onBack ? <Button variant="ghost" onClick={onBack}>← voltar</Button> : <span />}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           {hint && <span style={{ fontSize: 11.5, color: muted }}>{hint}</span>}
@@ -150,10 +155,11 @@ export interface OnbStepProps {
 
 // ── Conta (casal): criar do zero ou entrar com código de convite ────
 function AccountFrame({ children }: { children: React.ReactNode }) {
+  const isMobile = useIsMobile();
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, fontFamily: 'Montserrat, sans-serif', overflow: 'auto' }}>
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 20, padding: '40px 28px' }}>
-        <img src={logo} alt="Poupê" style={{ height: 74, width: 'auto', objectFit: 'contain', display: 'block' }} />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', gap: 20, padding: isMobile ? '32px 18px' : '40px 28px' }}>
+        <img src={logo} alt="Poupê" style={{ height: isMobile ? 52 : 74, width: 'auto', objectFit: 'contain', display: 'block' }} />
         {children}
       </div>
     </div>
@@ -164,19 +170,19 @@ export function AccountChoice({ onCreate, onJoin }: { onCreate: () => void; onJo
   return (
     <AccountFrame>
       <div style={{ fontSize: 11.5, color: blue, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Boas-vindas</div>
-      <div style={{ fontWeight: 800, letterSpacing: '-0.032em', fontSize: 48, lineHeight: 1.03, maxWidth: 700 }}>
+      <div style={{ fontWeight: 800, letterSpacing: '-0.032em', fontSize: 'clamp(28px, 7vw, 48px)', lineHeight: 1.1, maxWidth: 700 }}>
         Vamos organizar suas <span style={{ color: green }}>finanças</span> juntos.
       </div>
       <div style={{ fontSize: 15.5, color: ink2, maxWidth: 520, lineHeight: 1.55 }}>
         O Poupê é feito pra duas pessoas dividirem a mesma vida financeira. Comece uma conta nova, ou entre com o código que a outra pessoa te mandou.
       </div>
       <div style={{ display: 'flex', gap: 14, marginTop: 10, flexWrap: 'wrap', justifyContent: 'center' }}>
-        <div onClick={onCreate} style={{ cursor: 'pointer', width: 260, padding: '20px 18px', border: `1.6px solid ${ink}`, borderRadius: 13, background: paper, textAlign: 'left' }}>
+        <div onClick={onCreate} style={{ cursor: 'pointer', width: '100%', maxWidth: 260, padding: '20px 18px', border: `1.6px solid ${ink}`, borderRadius: 13, background: paper, textAlign: 'left' }}>
           <div style={{ fontSize: 26, marginBottom: 8 }}>🏡</div>
           <div style={{ fontWeight: 800, fontSize: 15.5 }}>Criar uma conta nova</div>
           <div style={{ fontSize: 12, color: muted, marginTop: 5, lineHeight: 1.45 }}>Você é o primeiro a entrar. Depois convida a outra pessoa com um código.</div>
         </div>
-        <div onClick={onJoin} style={{ cursor: 'pointer', width: 260, padding: '20px 18px', border: `1.6px dashed ${ink2}`, borderRadius: 13, background: paper, textAlign: 'left' }}>
+        <div onClick={onJoin} style={{ cursor: 'pointer', width: '100%', maxWidth: 260, padding: '20px 18px', border: `1.6px dashed ${ink2}`, borderRadius: 13, background: paper, textAlign: 'left' }}>
           <div style={{ fontSize: 26, marginBottom: 8 }}>🔑</div>
           <div style={{ fontWeight: 800, fontSize: 15.5 }}>Entrar com um código</div>
           <div style={{ fontSize: 12, color: muted, marginTop: 5, lineHeight: 1.45 }}>Alguém já criou a conta e te passou um código de convite.</div>
@@ -268,7 +274,7 @@ export function PeopleFields() {
 
   return (
     <>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, maxWidth: 640 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 12, maxWidth: 640 }}>
         {state.people.map((p, i) => (
           <div key={p.id} style={{ padding: 14, border: `1.6px solid ${ink}`, borderRadius: 12, background: paper, display: 'flex', alignItems: 'center', gap: 13 }}>
             <div style={{ width: 50, height: 50, borderRadius: 99, background: p.color, color: paper, display: 'grid', placeItems: 'center', fontWeight: 800, fontSize: 21, flexShrink: 0 }}>{p.name[0].toUpperCase()}</div>
@@ -289,7 +295,7 @@ export function PeopleFields() {
           </div>
         ))}
 
-        <div style={{ padding: 14, border: `1.6px dashed ${ink2}`, borderRadius: 12, gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ padding: 14, border: `1.6px dashed ${ink2}`, borderRadius: 12, gridColumn: '1 / -1', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div style={{ width: 50, height: 50, borderRadius: 99, background: color, color: paper, display: 'grid', placeItems: 'center', fontSize: 21, fontWeight: 800, flexShrink: 0, opacity: name ? 1 : 0.35 }}>
             {name ? name[0].toUpperCase() : '+'}
           </div>

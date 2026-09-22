@@ -3,7 +3,7 @@ import * as S from '../lib/store';
 import { useStore } from '../lib/store';
 import {
   Button, IconBtn, Field, Input, MoneyInput, Select, Chip, Card, CardTitle, Bar, Donut,
-  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, PersonSpendCard, tokens,
+  KindSwitch, TopBar, FAB, EmptyState, Row, Modal, PersonSpendCard, useIsMobile, tokens,
 } from '../components/ui';
 import type { AppState, TxKind } from '../lib/types';
 
@@ -175,6 +175,7 @@ interface ScreenProps {
 // ── Tela: Lançamentos ──────────────────────────────────────────────
 export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const { month, personId } = state.ui;
   const t = S.totalsFor(state, month, personId);
   const prev = S.totalsFor(state, S.addMonths(month, -1), personId);
@@ -201,14 +202,14 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const spentPct = t.income ? (t.expenses / t.income) * 100 : 0;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Lançamentos" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.45fr 1fr', gap: 16, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.45fr 1fr', gap: 16, padding: 16 }}>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto', paddingRight: 2 }}>
           <Card>
             <CardTitle sub="preencha e tecle Enter — entra na hora" right={<KindSwitch value={g.kind} onChange={v => g.setKind(v as TxKind)} />}>Lançar gasto</CardTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '1.8fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.8fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
               <Field label="descrição"><Input value={g.desc} onChange={g.setDesc} placeholder="o que foi?" onEnter={saveGasto} /></Field>
               <Field label="valor"><MoneyInput value={g.amount} onChange={g.setAmount} onEnter={saveGasto} accent={ink} /></Field>
               <Field label="categoria"><Select value={g.categoryId} onChange={g.setCategoryId} options={catOptions(state)} placeholder="—" /></Field>
@@ -225,7 +226,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
             <CardTitle sub="salário, extra, freela…" right={
               <KindSwitch value={incKind} onChange={setIncKind} options={[{ key: 'Salário', label: 'Salário' }, { key: 'Extra', label: 'Extra' }]} />
             }>Lançar entrada</CardTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: '2.4fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2.4fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
               <Field label="descrição"><Input value={inc.desc} onChange={inc.setDesc} placeholder="de onde veio?" onEnter={saveEntrada} accent={green} /></Field>
               <Field label="valor"><MoneyInput value={inc.amount} onChange={inc.setAmount} onEnter={saveEntrada} accent={green} /></Field>
               <Field label="quem"><Select value={inc.personId} onChange={inc.setPersonId} options={personOptions(state)} placeholder="—" accent={green} /></Field>
@@ -309,6 +310,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
 // ── Tela: Gastos do mês ────────────────────────────────────────────
 export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const { month, personId } = state.ui;
   const t = S.totalsFor(state, month, personId);
   const prev = S.totalsFor(state, S.addMonths(month, -1), personId);
@@ -331,9 +333,9 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const delta = t.comum - prev.comum;
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Gastos do mês" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.6fr 1fr', gap: 16, padding: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
@@ -424,6 +426,7 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
 // ── Tela: Ganhos do mês ────────────────────────────────────────────
 export function GanhosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const { month, personId } = state.ui;
   const t = S.totalsFor(state, month, personId);
   const prev = S.totalsFor(state, S.addMonths(month, -1), personId);
@@ -443,9 +446,9 @@ export function GanhosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const maxPersonRow = Math.max(1, ...byPersonRows.map(r => r.value));
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Ganhos do mês" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.6fr 1fr', gap: 16, padding: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
           <Card>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 14 }}>
@@ -520,6 +523,7 @@ export function GanhosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
 // ── Tela: Fixos ────────────────────────────────────────────────────
 export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const { month, personId } = state.ui;
   const t = S.totalsFor(state, month, personId);
   const [filter, setFilter] = React.useState('todos');
@@ -541,7 +545,7 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
   const people = S.byPerson(state, month);
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Fixos" onNavigate={onNavigate} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 18px', borderBottom: `1px solid ${ink2}2a`, background: paper2, flexShrink: 0, flexWrap: 'wrap' }}>
@@ -552,11 +556,11 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
         <Button size="sm" variant="outline" onClick={() => setAdding(a => !a)}>{adding ? '× cancelar' : '+ novo fixo'}</Button>
       </div>
 
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.65fr 1fr', gap: 0 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, borderRight: `1.5px solid ${ink}` }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.65fr 1fr', gap: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', minHeight: isMobile ? undefined : 0, borderRight: isMobile ? undefined : `1.5px solid ${ink}` }}>
           {adding && (
             <div style={{ padding: 12, borderBottom: `1.5px solid ${ink}`, background: `${green}0a` }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1.6fr .9fr .6fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.6fr .9fr .6fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
                 <Field label="descrição"><Input value={f.desc} onChange={f.setDesc} placeholder="Aluguel…" onEnter={addFixo} accent={green} /></Field>
                 <Field label="valor"><MoneyInput value={f.amount} onChange={f.setAmount} onEnter={addFixo} /></Field>
                 <Field label="dia"><Input type="number" value={f.day} onChange={f.setDay} /></Field>
@@ -626,6 +630,7 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
 // ── Tela: Parcelamentos ────────────────────────────────────────────
 export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const { month, personId } = state.ui;
   const t = S.totalsFor(state, month, personId);
   const [adding, setAdding] = React.useState(false);
@@ -664,11 +669,11 @@ export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const perPerson = state.people.map(p => ({ person: p, value: rows.filter(r => r.personId === p.id).reduce((s, r) => s + Number(r.amount), 0) }));
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Parcelamentos" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '1.6fr 1fr', gap: 16, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.6fr 1fr', gap: 16, padding: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: 10 }}>
             <Card pad={12}>
               <div style={{ fontSize: 9.5, color: muted, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 700 }}>compromisso mensal</div>
               <div style={{ fontWeight: 800, fontSize: 23, letterSpacing: '-0.025em', marginTop: 4 }}>{S.fmt0(monthly)}</div>
@@ -692,7 +697,7 @@ export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
 
             {adding && (
               <div style={{ padding: 12, marginBottom: 10, border: `1.5px solid ${green}`, borderRadius: 9, background: `${green}0a` }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1.6fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.6fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
                   <Field label="descrição"><Input value={f.desc} onChange={f.setDesc} placeholder="iPhone 15…" onEnter={add} accent={green} /></Field>
                   <Field label="valor da parcela"><MoneyInput value={f.amount} onChange={f.setAmount} onEnter={add} /></Field>
                   <Field label="categoria"><Select value={f.categoryId} onChange={f.setCategoryId} options={catOptions(state)} placeholder="—" /></Field>

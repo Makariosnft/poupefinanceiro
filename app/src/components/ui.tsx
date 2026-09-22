@@ -16,6 +16,20 @@ export const gold = '#d4a24a';
 export const tokens = { ink, ink2, muted, paper, paper2, green, red, amber, blue, gold };
 export const LOGO = logo;
 
+// ── Responsivo ─────────────────────────────────────────────────────
+const MOBILE_BREAKPOINT = 860;
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState(() => typeof window !== 'undefined' && window.innerWidth <= MOBILE_BREAKPOINT);
+  React.useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+    const onChange = () => setIsMobile(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isMobile;
+}
+
 // ── Botão ──────────────────────────────────────────────────────────
 interface ButtonProps {
   children: React.ReactNode;
@@ -325,7 +339,7 @@ export function Modal({ open, onClose, title, children, footer, width = 460 }: M
   if (!open) return null;
   return (
     <div onClick={onClose} style={{
-      position: 'absolute', inset: 0, zIndex: 60, display: 'grid', placeItems: 'center', padding: 20,
+      position: 'fixed', inset: 0, zIndex: 60, display: 'grid', placeItems: 'center', padding: 20,
       background: shown ? 'rgba(20,18,15,0.42)' : 'rgba(20,18,15,0)', backdropFilter: shown ? 'blur(2px)' : 'none',
       transition: 'background .2s, backdrop-filter .2s',
     }}>
@@ -350,7 +364,7 @@ export function Modal({ open, onClose, title, children, footer, width = 460 }: M
 // ── Toasts ─────────────────────────────────────────────────────────
 export function Toaster({ toasts }: { toasts: Toast[] }) {
   return (
-    <div style={{ position: 'absolute', bottom: 18, left: 18, zIndex: 80, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
+    <div style={{ position: 'fixed', bottom: 18, left: 18, zIndex: 80, display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none' }}>
       {toasts.map(t => <ToastItem key={t.id} {...t} />)}
     </div>
   );
@@ -420,6 +434,7 @@ export const TABS = ['Lançamentos', 'Ganhos do mês', 'Gastos do mês', 'Fixos'
 
 export function TopBar({ activeTab, onNavigate }: { activeTab: string; onNavigate: (tab: string) => void }) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const month = state.ui.month;
   const year = month.slice(0, 4);
   const activeIdx = Number(month.slice(5, 7)) - 1;
@@ -440,60 +455,74 @@ export function TopBar({ activeTab, onNavigate }: { activeTab: string; onNavigat
   return (
     <div style={{ borderBottom: `1.5px solid ${ink}`, background: paper, flexShrink: 0 }}>
       {/* Logo + linha do tempo de meses */}
-      <div style={{ display: 'flex', padding: '11px 18px 7px', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', padding: isMobile ? '9px 12px 7px' : '11px 18px 7px', alignItems: 'center', gap: isMobile ? 6 : 14 }}>
         <img src={LOGO} alt="Poupê" style={{ height: 24, width: 'auto', objectFit: 'contain', display: 'block', flexShrink: 0 }} />
-        <IconBtn onClick={() => actions.setMonth(addMonths(month, -12))} title="Ano anterior">‹</IconBtn>
-        {MONTHS_PT.map((m, i) => {
-          const on = i === activeIdx;
+        {isMobile ? (
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <IconBtn onClick={() => actions.setMonth(addMonths(month, -1))} title="Mês anterior" size={30}>‹</IconBtn>
+            <span style={{ fontWeight: 700, fontSize: 13, letterSpacing: '-0.01em', minWidth: 104, textAlign: 'center' }}>{monthLabel(month)}</span>
+            <IconBtn onClick={() => actions.setMonth(addMonths(month, 1))} title="Próximo mês" size={30}>›</IconBtn>
+          </div>
+        ) : (
+          <>
+            <IconBtn onClick={() => actions.setMonth(addMonths(month, -12))} title="Ano anterior">‹</IconBtn>
+            {MONTHS_PT.map((m, i) => {
+              const on = i === activeIdx;
+              return (
+                <button key={m} type="button" onClick={() => actions.setMonth(`${year}-${String(i + 1).padStart(2, '0')}`)}
+                  style={{
+                    flex: 1, textAlign: 'center', border: 'none', background: 'transparent', cursor: 'pointer',
+                    fontFamily: 'Montserrat, sans-serif', fontSize: 11.5, fontWeight: 600,
+                    color: on ? ink : muted, padding: '5px 0', position: 'relative',
+                    borderTop: on ? `2.5px solid ${ink}` : '1px solid #00000022',
+                    transition: 'color .15s, border-color .15s', minWidth: 0,
+                  }}
+                  onMouseEnter={e => { if (!on) e.currentTarget.style.color = ink2; }}
+                  onMouseLeave={e => { if (!on) e.currentTarget.style.color = muted; }}>
+                  {m}
+                  {on && <span style={{ position: 'absolute', top: -7, left: '50%', transform: 'translateX(-50%)', width: 6, height: 6, borderRadius: 99, background: ink }} />}
+                </button>
+              );
+            })}
+            <IconBtn onClick={() => actions.setMonth(addMonths(month, 12))} title="Próximo ano">›</IconBtn>
+          </>
+        )}
+        <div style={{ paddingLeft: isMobile ? 0 : 8, fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', flexShrink: 0 }}>{year}</div>
+      </div>
+
+      {/* Abas */}
+      <nav style={{ display: 'flex', gap: 2, minWidth: 0, overflowX: 'auto', padding: isMobile ? '0 12px' : '0 18px', WebkitOverflowScrolling: 'touch' }}>
+        {TABS.map(t => {
+          const on = t === activeTab;
           return (
-            <button key={m} type="button" onClick={() => actions.setMonth(`${year}-${String(i + 1).padStart(2, '0')}`)}
+            <button key={t} type="button" onClick={() => onNavigate(t)}
               style={{
-                flex: 1, textAlign: 'center', border: 'none', background: 'transparent', cursor: 'pointer',
-                fontFamily: 'Montserrat, sans-serif', fontSize: 11.5, fontWeight: 600,
-                color: on ? ink : muted, padding: '5px 0', position: 'relative',
-                borderTop: on ? `2.5px solid ${ink}` : '1px solid #00000022',
-                transition: 'color .15s, border-color .15s', minWidth: 0,
+                padding: '6px 11px', border: 'none', background: 'transparent', cursor: 'pointer',
+                fontFamily: 'Montserrat, sans-serif', fontSize: 12.5, fontWeight: 600,
+                color: on ? ink : ink2, borderBottom: `2.5px solid ${on ? ink : 'transparent'}`,
+                marginBottom: -1, whiteSpace: 'nowrap', transition: 'color .15s, border-color .15s', flexShrink: 0,
               }}
-              onMouseEnter={e => { if (!on) e.currentTarget.style.color = ink2; }}
-              onMouseLeave={e => { if (!on) e.currentTarget.style.color = muted; }}>
-              {m}
-              {on && <span style={{ position: 'absolute', top: -7, left: '50%', transform: 'translateX(-50%)', width: 6, height: 6, borderRadius: 99, background: ink }} />}
+              onMouseEnter={e => { if (!on) e.currentTarget.style.color = ink; }}
+              onMouseLeave={e => { if (!on) e.currentTarget.style.color = ink2; }}>
+              {t}
             </button>
           );
         })}
-        <IconBtn onClick={() => actions.setMonth(addMonths(month, 12))} title="Próximo ano">›</IconBtn>
-        <div style={{ paddingLeft: 8, fontWeight: 700, fontSize: 14, letterSpacing: '-0.01em', flexShrink: 0 }}>{year}</div>
-      </div>
+      </nav>
 
-      {/* Abas + filtro de pessoa */}
-      <div style={{ display: 'flex', alignItems: 'center', padding: '0 18px 9px', gap: 14 }}>
-        <nav style={{ display: 'flex', gap: 2, flex: 1, minWidth: 0, overflowX: 'auto' }}>
-          {TABS.map(t => {
-            const on = t === activeTab;
-            return (
-              <button key={t} type="button" onClick={() => onNavigate(t)}
-                style={{
-                  padding: '6px 11px', border: 'none', background: 'transparent', cursor: 'pointer',
-                  fontFamily: 'Montserrat, sans-serif', fontSize: 12.5, fontWeight: 600,
-                  color: on ? ink : ink2, borderBottom: `2.5px solid ${on ? ink : 'transparent'}`,
-                  marginBottom: -1, whiteSpace: 'nowrap', transition: 'color .15s, border-color .15s', flexShrink: 0,
-                }}
-                onMouseEnter={e => { if (!on) e.currentTarget.style.color = ink; }}
-                onMouseLeave={e => { if (!on) e.currentTarget.style.color = ink2; }}>
-                {t}
-              </button>
-            );
-          })}
-        </nav>
-        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0 }}>
-          <span style={{ fontSize: 11, color: muted }}>quem:</span>
+      {/* Filtro de pessoa + ações */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: isMobile ? '7px 12px 9px' : '7px 18px 9px', gap: 8, overflowX: isMobile ? 'auto' : undefined, WebkitOverflowScrolling: 'touch' }}>
+        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flex: isMobile ? undefined : 1, minWidth: 0, overflowX: isMobile ? undefined : 'auto' }}>
+          <span style={{ fontSize: 11, color: muted, flexShrink: 0 }}>quem:</span>
           <Chip active={state.ui.personId === 'all'} onClick={() => actions.setPerson('all')}>Todos</Chip>
           {state.people.map(p => (
             <Chip key={p.id} active={state.ui.personId === p.id} color={p.color} onClick={() => actions.setPerson(p.id)}>{p.name}</Chip>
           ))}
-          <IconBtn onClick={() => onNavigate('Configurações')} title="Configurações">⚙️</IconBtn>
+        </div>
+        <div style={{ display: 'flex', gap: 5, alignItems: 'center', flexShrink: 0, marginLeft: isMobile ? 0 : 'auto' }}>
+          <IconBtn onClick={() => onNavigate('Configurações')} title="Configurações" size={isMobile ? 32 : 26}>⚙️</IconBtn>
           <div ref={menuRef} style={{ position: 'relative' }}>
-            <IconBtn onClick={() => setMenuOpen(o => !o)} title="Apagar dados" tone={red}>🗑</IconBtn>
+            <IconBtn onClick={() => setMenuOpen(o => !o)} title="Apagar dados" tone={red} size={isMobile ? 32 : 26}>🗑</IconBtn>
             {menuOpen && (
               <div style={{
                 position: 'absolute', right: 0, top: '100%', marginTop: 6, zIndex: 50,
@@ -555,7 +584,7 @@ export function FAB({ onClick }: { onClick: () => void }) {
     <button type="button" onClick={onClick} title="Novo lançamento"
       onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)}
       style={{
-        position: 'absolute', right: 22, bottom: 22, width: 54, height: 54, borderRadius: 99,
+        position: 'fixed', right: 22, bottom: 22, width: 54, height: 54, borderRadius: 99,
         background: ink, color: paper, border: 'none', fontSize: 26, cursor: 'pointer', zIndex: 30,
         display: 'grid', placeItems: 'center', paddingBottom: 3,
         boxShadow: h ? '0 6px 0 rgba(0,0,0,.2), 0 14px 32px rgba(0,0,0,.24)' : '0 4px 0 rgba(0,0,0,.18), 0 8px 20px rgba(0,0,0,.15)',

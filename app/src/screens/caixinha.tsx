@@ -3,7 +3,7 @@ import * as S from '../lib/store';
 import { useStore } from '../lib/store';
 import {
   Button, IconBtn, Field, Input, MoneyInput, Card, CardTitle, EmptyState, Row, KindSwitch,
-  TopBar, FAB, Modal, tokens,
+  TopBar, FAB, Modal, useIsMobile, tokens,
 } from '../components/ui';
 
 const { ink2, muted, paper, paper2, green, red } = tokens;
@@ -18,6 +18,7 @@ const jarColor = (id: string) => JAR_COLORS[[...id].reduce((s, c) => s + c.charC
 
 export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
   const { state, actions } = useStore();
+  const isMobile = useIsMobile();
   const { month } = state.ui;
 
   const caixinhas = state.caixinhas;
@@ -58,9 +59,9 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
   };
 
   return (
-    <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: paper, overflow: 'hidden' }}>
+    <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Caixinha" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: '200px 1fr 290px', gap: 13, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '200px 1fr 290px', gap: 13, padding: 16 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 9, minHeight: 0, overflow: 'auto' }}>
           <div style={{ fontSize: 9.5, color: muted, letterSpacing: '0.12em', textTransform: 'uppercase', fontWeight: 700, padding: '2px 2px' }}>suas caixinhas</div>
           {caixinhas.map(c => {
@@ -110,7 +111,7 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
               <CardTitle sub="qualquer valor, a qualquer momento" right={<KindSwitch value={kind} onChange={v => setKind(v as 'aporte' | 'retirada')} size="md" options={[
                 { key: 'aporte', label: 'Aportar', icon: '↑' }, { key: 'retirada', label: 'Retirar', icon: '↓' },
               ]} />}>Movimentar</CardTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr 1fr auto', gap: 8, alignItems: 'end' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1.4fr 1fr auto', gap: 8, alignItems: 'end' }}>
                 <Field label="valor"><MoneyInput value={amount} onChange={setAmount} onEnter={addMov} accent={kind === 'aporte' ? green : red} /></Field>
                 <Field label="descrição (opcional)"><Input value={note} onChange={setNote} placeholder="do que se trata…" onEnter={addMov} /></Field>
                 <Field label="data"><Input type="date" value={date} onChange={setDate} /></Field>
