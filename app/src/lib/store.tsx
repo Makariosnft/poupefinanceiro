@@ -3,7 +3,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 import type { Account, AppState, Caixinha, CaixinhaMovement, Category, Debt, Goal, PaymentType, Person, Toast, Transaction } from './types';
 import {
-  CAIXINHA_MOVEMENTS_MAP, CATEGORIES_MAP, DATA_TABLES, DEBTS_MAP, GOALS_MAP, PAYMENT_TYPES_MAP, PEOPLE_MAP, TX_MAP,
+  CAIXINHA_MAP, CAIXINHA_MOVEMENTS_MAP, CATEGORIES_MAP, DATA_TABLES, DEBTS_MAP, GOALS_MAP, PAYMENT_TYPES_MAP, PEOPLE_MAP, TX_MAP,
   caixinhaFromRow, caixinhaMovementsFromRow, categoriesFromRow, debtsFromRow, goalsFromRow, patchToRow, paymentTypesFromRow, peopleFromRow, txFromRow,
 } from './sync';
 
@@ -103,7 +103,7 @@ function buildActions(
     setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
     setDebts: React.Dispatch<React.SetStateAction<Debt[]>>;
     setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
-    setCaixinha: React.Dispatch<React.SetStateAction<Caixinha | null>>;
+    setCaixinhas: React.Dispatch<React.SetStateAction<Caixinha[]>>;
     setCaixinhaMovements: React.Dispatch<React.SetStateAction<CaixinhaMovement[]>>;
   },
   accountIdRef: React.MutableRefObject<string | null>,
@@ -117,6 +117,7 @@ function buildActions(
   const transactions = makeCrud<Transaction>('transactions', lists.setTransactions, TX_MAP, accountIdRef);
   const debts = makeCrud<Debt>('debts', lists.setDebts, DEBTS_MAP, accountIdRef);
   const goals = makeCrud<Goal>('goals', lists.setGoals, GOALS_MAP, accountIdRef);
+  const caixinhas = makeCrud<Caixinha>('caixinha', lists.setCaixinhas, CAIXINHA_MAP, accountIdRef);
   const caixinhaMovements = makeCrud<CaixinhaMovement>('caixinha_movements', lists.setCaixinhaMovements, CAIXINHA_MOVEMENTS_MAP, accountIdRef);
 
   return {
@@ -221,21 +222,13 @@ function buildActions(
       toast('Lançamentos do ano apagados', 'warn');
     },
 
-    createCaixinha: async (description: string) => {
-      const accountId = accountIdRef.current;
-      if (!accountId) return null;
-      const id = newId();
-      const optimistic: Caixinha = { id, description };
-      lists.setCaixinha(optimistic);
-      const { error } = await supabase.from('caixinha').insert({ id, account_id: accountId, description });
-      if (error) { console.error(error); toast('Erro ao criar a caixinha.', 'error'); lists.setCaixinha(null); return null; }
+    createCaixinha: (description: string) => {
+      const c = caixinhas.add({ description });
       toast('Caixinha criada');
-      return id;
+      return c?.id ?? null;
     },
-    updateCaixinhaDescription: (id: string, description: string) => {
-      lists.setCaixinha(c => (c ? { ...c, description } : c));
-      supabase.from('caixinha').update({ description }).eq('id', id).then(({ error }) => { if (error) console.error(error); });
-    },
+    updateCaixinhaDescription: (id: string, description: string) => caixinhas.update(id, { description }),
+    delCaixinha: (id: string) => { caixinhas.remove(id); toast('Caixinha removida', 'warn'); },
     addCaixinhaMovement: (m: Omit<CaixinhaMovement, 'id'>) => {
       caixinhaMovements.add(m);
       toast(m.amount >= 0 ? 'Aporte registrado' : 'Retirada registrada');
@@ -257,7 +250,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [transactions, setTransactions] = React.useState<Transaction[]>([]);
   const [debts, setDebts] = React.useState<Debt[]>([]);
   const [goals, setGoals] = React.useState<Goal[]>([]);
-  const [caixinha, setCaixinha] = React.useState<Caixinha | null>(null);
+  const [caixinhas, setCaixinhas] = React.useState<Caixinha[]>([]);
   const [caixinhaMovements, setCaixinhaMovements] = React.useState<CaixinhaMovement[]>([]);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
@@ -276,7 +269,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions = React.useMemo(
     () => buildActions(
-      { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals, setCaixinha, setCaixinhaMovements },
+      { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals, setCaixinhas, setCaixinhaMovements },
       accountIdRef, setUi, setAccount, toast,
     ),
     [toast],
@@ -293,7 +286,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setUi(u => ({ ...u, accountId: null, accountChecked: false }));
         setAccount(null);
         setPeople([]); setCategories([]); setPaymentTypes([]); setTransactions([]); setDebts([]); setGoals([]);
-        setCaixinha(null); setCaixinhaMovements([]);
+        setCaixinhas([]); setCaixinhaMovements([]);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -329,7 +322,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         supabase.from('transactions').select('*').eq('account_id', accountId),
         supabase.from('debts').select('*').eq('account_id', accountId),
         supabase.from('goals').select('*').eq('account_id', accountId),
-        supabase.from('caixinha').select('*').eq('account_id', accountId).maybeSingle(),
+        supabase.from('caixinha').select('*').eq('account_id', accountId),
         supabase.from('caixinha_movements').select('*').eq('account_id', accountId),
       ]);
       if (cancelled) return;
@@ -339,7 +332,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setTransactions((tx.data || []).map(txFromRow));
       setDebts((d.data || []).map(debtsFromRow));
       setGoals((g.data || []).map(goalsFromRow));
-      setCaixinha(cx.data ? caixinhaFromRow(cx.data) : null);
+      setCaixinhas((cx.data || []).map(caixinhaFromRow));
       setCaixinhaMovements((cm.data || []).map(caixinhaMovementsFromRow));
     })();
 
@@ -369,19 +362,16 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     wire('transactions', setTransactions, txFromRow);
     wire('debts', setDebts, debtsFromRow);
     wire('goals', setGoals, goalsFromRow);
+    wire('caixinha', setCaixinhas, caixinhaFromRow);
     wire('caixinha_movements', setCaixinhaMovements, caixinhaMovementsFromRow);
-    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'caixinha', filter: `account_id=eq.${accountId}` }, (payload: any) => {
-      if (payload.eventType === 'DELETE') { setCaixinha(null); return; }
-      setCaixinha(caixinhaFromRow(payload.new));
-    });
     channel.subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [ui.accountId]);
 
   const state = React.useMemo<AppState>(
-    () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinha, caixinhaMovements, account, ui }),
-    [people, categories, paymentTypes, transactions, debts, goals, caixinha, caixinhaMovements, account, ui],
+    () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, account, ui }),
+    [people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, account, ui],
   );
   const value = React.useMemo(() => ({ state, actions, toast, toasts }), [state, actions, toast, toasts]);
 

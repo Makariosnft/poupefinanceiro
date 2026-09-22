@@ -98,7 +98,7 @@ export interface AppState {
   transactions: Transaction[];
   debts: Debt[];
   goals: Goal[];
-  caixinha: Caixinha | null;
+  caixinhas: Caixinha[];
   caixinhaMovements: CaixinhaMovement[];
   account: Account | null;
   ui: UIState;
