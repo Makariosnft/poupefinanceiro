@@ -95,6 +95,14 @@ export interface CardInvoicePayment {
   invoiceMonth: string; // YYYY-MM
 }
 
+export interface BalanceAdjustment {
+  id: string;
+  personId: string;
+  month: string; // YYYY-MM
+  amount: number; // pode ser negativo (correção pra baixo)
+  note?: string;
+}
+
 export interface Account {
   id: string;
   name: string;
@@ -111,6 +119,7 @@ export interface AppState {
   caixinhas: Caixinha[];
   caixinhaMovements: CaixinhaMovement[];
   cardInvoicePayments: CardInvoicePayment[];
+  balanceAdjustments: BalanceAdjustment[];
   account: Account | null;
   ui: UIState;
 }

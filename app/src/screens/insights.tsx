@@ -778,6 +778,16 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
   const [openTypeId, setOpenTypeId] = React.useState<string | null>(null);
+  const [adjustFor, setAdjustFor] = React.useState<string | null>(null);
+  const [adjAmount, setAdjAmount] = React.useState('');
+  const [adjNote, setAdjNote] = React.useState('');
+  const adjustPerson = state.people.find(p => p.id === adjustFor);
+  const saveAdjustment = () => {
+    const n = Number(adjAmount.replace(',', '.'));
+    if (!adjustFor || !n) return;
+    actions.addBalanceAdjustment(adjustFor, month, n, adjNote.trim() || undefined);
+    setAdjustFor(null); setAdjAmount(''); setAdjNote('');
+  };
   const openType = types.find(r => r.type.id === openTypeId);
   const typeBreakdown = openTypeId
     ? [...allSpend].filter(x => x.typeId === openTypeId).sort((a, b) => b.amount - a.amount)
@@ -865,6 +875,43 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
               ))}
             </div>
           </Card>
+
+          <Card pad={12} style={{ flexShrink: 0 }}>
+            <CardTitle sub="entradas menos gastos, acumulado desde o início">Saldo acumulado</CardTitle>
+            {state.people.map(p => {
+              const bal = S.cumulativeBalance(state, month, p.id);
+              return (
+                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px dashed ${ink2}30` }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600 }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 99, background: p.color, flexShrink: 0 }} />{p.name}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 700, fontSize: 13, color: bal >= 0 ? green : red }}>{S.fmt(bal)}</span>
+                    <IconBtn onClick={() => setAdjustFor(p.id)} title={`Ajustar saldo de ${p.name}`} size={22}>✎</IconBtn>
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 9, marginTop: 2, borderTop: `1.5px solid ${ink}`, fontWeight: 800, fontSize: 13 }}>
+              <span>Total da casa</span>
+              <span style={{ color: S.cumulativeBalance(state, month) >= 0 ? green : red }}>{S.fmt(S.cumulativeBalance(state, month))}</span>
+            </div>
+          </Card>
+
+          <Modal open={!!adjustFor} onClose={() => setAdjustFor(null)} title={`Ajustar saldo de ${adjustPerson?.name || ''}`} width={380}>
+            <div style={{ fontSize: 12, color: muted, marginBottom: 14 }}>
+              Some ou subtrai um valor do saldo acumulado de {adjustPerson?.name} a partir de {S.monthLabel(month).toLowerCase()} — útil quando sobrou (ou faltou) dinheiro que não foi lançado no site.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <Field label="valor (negativo pra subtrair)">
+                <Input type="number" value={adjAmount} onChange={setAdjAmount} placeholder="ex: 150 ou -80" onEnter={saveAdjustment} />
+              </Field>
+              <Field label="nota (opcional)">
+                <Input value={adjNote} onChange={setAdjNote} placeholder="ex: sobrou do mês passado" onEnter={saveAdjustment} />
+              </Field>
+              <Button onClick={saveAdjustment} disabled={!adjAmount || !Number(adjAmount.replace(',', '.'))}>Salvar ajuste</Button>
+            </div>
+          </Modal>
 
           <Card pad={12} style={{ flexShrink: 0 }}>
             <CardTitle sub="do mês inteiro — clique pra ver os lançamentos">Saídas por pagamento</CardTitle>
