@@ -192,6 +192,10 @@ function buildActions(
     },
     delTx: (id: string) => { transactions.remove(id); toast('Lançamento removido', 'warn'); },
     updateTx: (id: string, patch: Partial<Transaction>) => transactions.update(id, patch),
+    setInvoiceMonth: (id: string, month: string | null) => {
+      transactions.update(id, { invoiceMonthOverride: month || undefined });
+      toast(month ? `Fatura ajustada pra ${monthLabel(month).toLowerCase()}` : 'Fatura de volta ao automático');
+    },
 
     toggleFixoPaid: (id: string, month: string) => {
       lists.setTransactions(l => {
@@ -456,8 +460,19 @@ export function invoiceMonth(date: string, closingDay?: number | null): string {
 }
 
 function comumMonth(state: AppState, t: Transaction): string {
+  if (t.invoiceMonthOverride) return t.invoiceMonthOverride;
   const type = state.paymentTypes.find(p => p.id === t.typeId);
   return type?.kind === 'card' ? invoiceMonth(t.date, type.closing) : monthOf(t.date);
+}
+
+// Pra transação de cartão, o outro mês "candidato" — o lado oposto do dia
+// de fechamento — usado pra oferecer o botão de mover fatura manualmente.
+export function cardInvoiceInfo(t: Transaction, type: PaymentType | undefined) {
+  if (type?.kind !== 'card' || !type.closing) return null;
+  const auto = invoiceMonth(t.date, type.closing);
+  const day = Number(t.date.slice(8, 10));
+  const alt = day > type.closing ? addMonths(auto, -1) : addMonths(auto, 1);
+  return { auto, alt, effective: t.invoiceMonthOverride || auto, overridden: Boolean(t.invoiceMonthOverride) };
 }
 
 export function expandMonth(state: AppState, month: string, personId = 'all'): ExpandedMonth {

@@ -10,6 +10,7 @@ export const TX_MAP = {
   kind: 'kind', desc: 'description', amount: 'amount', categoryId: 'category_id', typeId: 'type_id',
   personId: 'person_id', date: 'date', dayOfMonth: 'day_of_month', paidMonths: 'paid_months',
   startMonth: 'start_month', totalInstallments: 'total_installments', incomeKind: 'income_kind',
+  invoiceMonthOverride: 'invoice_month_override',
 } as const;
 export const DEBTS_MAP = { name: 'name', total: 'total', paid: 'paid', rate: 'rate', min: 'min', personId: 'person_id', color: 'color' } as const;
 export const GOALS_MAP = { name: 'name', emoji: 'emoji', target: 'target', current: 'current', color: 'color', personId: 'person_id' } as const;

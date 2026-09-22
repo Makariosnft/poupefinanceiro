@@ -5,7 +5,7 @@ import {
   Button, IconBtn, Field, Input, MoneyInput, Select, Chip, Card, CardTitle, Bar, Donut,
   KindSwitch, TopBar, FAB, EmptyState, Row, Modal, PersonSpendCard, useIsMobile, tokens,
 } from '../components/ui';
-import type { AppState, TxKind } from '../lib/types';
+import type { AppState, Transaction, TxKind } from '../lib/types';
 
 const { ink, ink2, muted, paper, paper2, green, red, amber, blue, gold } = tokens;
 
@@ -321,6 +321,7 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
   const typeName = (id: string) => state.paymentTypes.find(x => x.id === id)?.name || '—';
   const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
+  const invoiceInfo = (tx: Transaction) => S.cardInvoiceInfo(tx, state.paymentTypes.find(x => x.id === tx.typeId));
 
   let list = t.items.comuns;
   if (q.trim()) list = list.filter(x => x.desc.toLowerCase().includes(q.toLowerCase()));
@@ -360,19 +361,33 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
             }>Lançamentos comuns</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {list.length === 0 ? <EmptyState icon="🔍" title="Nada encontrado" hint="Ajuste a busca ou o filtro de categoria." /> :
-                list.map((tx, i) => (
-                  <Row key={tx.id} last={i === list.length - 1} onDelete={() => actions.delTx(tx.id)}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '10px 1.7fr 62px 1fr 72px 66px 96px', alignItems: 'center', gap: 9, padding: '8px 26px 8px 2px', fontSize: 12.5 }}>
-                      <span style={{ width: 8, height: 8, borderRadius: 99, background: catColor(tx.categoryId) }} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{tx.desc}</span>
-                      <span style={{ color: muted, fontSize: 11 }}>{S.dayLabel(tx.date)}</span>
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{catName(tx.categoryId)}</span>
-                      <span style={{ color: muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personName(tx.personId)}</span>
-                      <span style={{ color: muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeName(tx.typeId)}</span>
-                      <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>{S.fmt(tx.amount)}</span>
-                    </div>
-                  </Row>
-                ))}
+                list.map((tx, i) => {
+                  const info = invoiceInfo(tx);
+                  return (
+                    <Row key={tx.id} last={i === list.length - 1} onDelete={() => actions.delTx(tx.id)}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '10px 1.7fr 62px 1fr 72px 66px 96px', alignItems: 'center', gap: 9, padding: '8px 26px 8px 2px', fontSize: 12.5 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 99, background: catColor(tx.categoryId) }} />
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{tx.desc}</span>
+                        <span style={{ color: muted, fontSize: 11 }}>{S.dayLabel(tx.date)}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{catName(tx.categoryId)}</span>
+                        <span style={{ color: muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personName(tx.personId)}</span>
+                        <span style={{ color: muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {typeName(tx.typeId)}
+                          {info && (
+                            <span
+                              onClick={() => actions.setInvoiceMonth(tx.id, info.overridden ? null : info.alt)}
+                              title={info.overridden ? 'Fatura ajustada manualmente — clique pra voltar ao automático' : 'Essa compra caiu na fatura errada? clique pra mover'}
+                              style={{ display: 'block', fontSize: 9.5, color: info.overridden ? amber : muted, cursor: 'pointer', textDecoration: 'underline', marginTop: 1 }}
+                            >
+                              fatura {S.monthShort(info.effective)}{info.overridden ? ' ✎' : ''}
+                            </span>
+                          )}
+                        </span>
+                        <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>{S.fmt(tx.amount)}</span>
+                      </div>
+                    </Row>
+                  );
+                })}
             </div>
             <div style={{ borderTop: `1.5px solid ${ink}`, marginTop: 8, paddingTop: 9, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 14 }}>
               <span>{list.length === t.items.comuns.length ? 'Total' : `Total filtrado (${list.length})`}</span><span>{S.fmt(listTotal)}</span>

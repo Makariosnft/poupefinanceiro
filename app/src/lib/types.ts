@@ -39,6 +39,9 @@ export interface Transaction {
   totalInstallments?: number;
   // entrada
   incomeKind?: 'Salário' | 'Extra';
+  // comum pago no cartão: mês da fatura escolhido manualmente, sobrepõe
+  // o cálculo automático pelo dia de fechamento
+  invoiceMonthOverride?: string; // YYYY-MM
 }
 
 export interface Debt {
