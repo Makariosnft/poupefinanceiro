@@ -187,7 +187,10 @@ function buildActions(
     updatePaymentType: (id: string, patch: Partial<PaymentType>) => paymentTypes.update(id, patch),
     delPaymentType: (id: string) => paymentTypes.remove(id),
     addPerson: (name: string, color: string) => { people.add({ name, color }); toast(`${name} adicionado(a)`); },
-    delPerson: (id: string) => people.remove(id),
+    delPerson: (id: string) => {
+      people.remove(id);
+      setUi(u => (u.personId === id ? { ...u, personId: 'all' } : u));
+    },
 
     addDebt: (d: Omit<Debt, 'id' | 'color' | 'paid'> & Partial<Pick<Debt, 'color' | 'paid'>>) => {
       debts.add({ color: '#b04a3a', paid: 0, ...d } as Omit<Debt, 'id'>);
@@ -348,7 +351,9 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         toast('Erro ao carregar seus dados — isso não significa que foram perdidos. Recarregue a página; se persistir, avise.', 'error');
         return;
       }
-      setPeople((p.data || []).map(peopleFromRow));
+      const peopleList = (p.data || []).map(peopleFromRow);
+      setPeople(peopleList);
+      setUi(u => (u.personId !== 'all' && !peopleList.some(pp => pp.id === u.personId) ? { ...u, personId: 'all' } : u));
       setCategories((c.data || []).map(categoriesFromRow));
       setPaymentTypes((pt.data || []).map(paymentTypesFromRow));
       setTransactions((tx.data || []).map(txFromRow));
