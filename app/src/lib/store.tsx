@@ -62,34 +62,42 @@ interface StoreCtxValue {
 
 const StoreCtx = React.createContext<StoreCtxValue | null>(null);
 
+const SAVE_ERROR_MSG = 'Não foi possível salvar — verifique sua internet e tente de novo. Se sumir da tela, refaça o lançamento.';
+
 function makeCrud<T extends { id: string }>(
   table: string,
   setList: React.Dispatch<React.SetStateAction<T[]>>,
   map: Record<string, string>,
   accountIdRef: React.MutableRefObject<string | null>,
+  toast: (msg: string, tone?: Toast['tone']) => void,
 ) {
   return {
     add: (item: Omit<T, 'id'>, id = newId()) => {
       const accountId = accountIdRef.current;
-      if (!accountId) return null;
+      if (!accountId) { toast('Sua conta ainda está carregando — aguarde um instante e tente de novo.', 'error'); return null; }
       const full = { id, ...item } as T;
       setList(l => [full, ...l]);
       supabase.from(table).insert({ id, account_id: accountId, ...patchToRow(full, map) }).then(({ error }) => {
-        if (error) { console.error(error); setList(l => l.filter(x => x.id !== id)); }
+        if (error) { console.error(error); setList(l => l.filter(x => x.id !== id)); toast(SAVE_ERROR_MSG, 'error'); }
       });
       return full;
     },
     update: (id: string, patch: Partial<T>) => {
-      setList(l => l.map(x => (x.id === id ? { ...x, ...patch } : x)));
+      let prev: T | undefined;
+      setList(l => { prev = l.find(x => x.id === id); return l.map(x => (x.id === id ? { ...x, ...patch } : x)); });
       supabase.from(table).update(patchToRow(patch, map)).eq('id', id).then(({ error }) => {
-        if (error) console.error(error);
+        if (error) {
+          console.error(error);
+          if (prev) { const snapshot = prev; setList(l => l.map(x => (x.id === id ? snapshot : x))); }
+          toast(SAVE_ERROR_MSG, 'error');
+        }
       });
     },
     remove: (id: string) => {
       let removed: T | undefined;
       setList(l => { removed = l.find(x => x.id === id); return l.filter(x => x.id !== id); });
       supabase.from(table).delete().eq('id', id).then(({ error }) => {
-        if (error && removed) { console.error(error); setList(l => [removed as T, ...l]); }
+        if (error && removed) { console.error(error); setList(l => [removed as T, ...l]); toast(SAVE_ERROR_MSG, 'error'); }
       });
     },
   };
@@ -111,14 +119,14 @@ function buildActions(
   setAccount: React.Dispatch<React.SetStateAction<Account | null>>,
   toast: (msg: string, tone?: Toast['tone']) => void,
 ) {
-  const people = makeCrud<Person>('people', lists.setPeople, PEOPLE_MAP, accountIdRef);
-  const categories = makeCrud<Category>('categories', lists.setCategories, CATEGORIES_MAP, accountIdRef);
-  const paymentTypes = makeCrud<PaymentType>('payment_types', lists.setPaymentTypes, PAYMENT_TYPES_MAP, accountIdRef);
-  const transactions = makeCrud<Transaction>('transactions', lists.setTransactions, TX_MAP, accountIdRef);
-  const debts = makeCrud<Debt>('debts', lists.setDebts, DEBTS_MAP, accountIdRef);
-  const goals = makeCrud<Goal>('goals', lists.setGoals, GOALS_MAP, accountIdRef);
-  const caixinhas = makeCrud<Caixinha>('caixinha', lists.setCaixinhas, CAIXINHA_MAP, accountIdRef);
-  const caixinhaMovements = makeCrud<CaixinhaMovement>('caixinha_movements', lists.setCaixinhaMovements, CAIXINHA_MOVEMENTS_MAP, accountIdRef);
+  const people = makeCrud<Person>('people', lists.setPeople, PEOPLE_MAP, accountIdRef, toast);
+  const categories = makeCrud<Category>('categories', lists.setCategories, CATEGORIES_MAP, accountIdRef, toast);
+  const paymentTypes = makeCrud<PaymentType>('payment_types', lists.setPaymentTypes, PAYMENT_TYPES_MAP, accountIdRef, toast);
+  const transactions = makeCrud<Transaction>('transactions', lists.setTransactions, TX_MAP, accountIdRef, toast);
+  const debts = makeCrud<Debt>('debts', lists.setDebts, DEBTS_MAP, accountIdRef, toast);
+  const goals = makeCrud<Goal>('goals', lists.setGoals, GOALS_MAP, accountIdRef, toast);
+  const caixinhas = makeCrud<Caixinha>('caixinha', lists.setCaixinhas, CAIXINHA_MAP, accountIdRef, toast);
+  const caixinhaMovements = makeCrud<CaixinhaMovement>('caixinha_movements', lists.setCaixinhaMovements, CAIXINHA_MOVEMENTS_MAP, accountIdRef, toast);
 
   return {
     setMonth: (m: string) => setUi(u => ({ ...u, month: m })),
@@ -216,13 +224,17 @@ function buildActions(
     deleteMonth: (month: string) => {
       lists.setTransactions(l => l.filter(t => monthOf(t.date) !== month));
       const accountId = accountIdRef.current;
-      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${month}-01`).lt('date', `${addMonths(month, 1)}-01`).then(() => {});
+      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${month}-01`).lt('date', `${addMonths(month, 1)}-01`).then(({ error }) => {
+        if (error) { console.error(error); toast('Erro ao apagar — pode ter ficado algo pra trás. Recarregue a página.', 'error'); }
+      });
       toast('Lançamentos do mês apagados', 'warn');
     },
     deleteYear: (year: string) => {
       lists.setTransactions(l => l.filter(t => t.date.slice(0, 4) !== year));
       const accountId = accountIdRef.current;
-      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${year}-01-01`).lte('date', `${year}-12-31`).then(() => {});
+      if (accountId) supabase.from('transactions').delete().eq('account_id', accountId).gte('date', `${year}-01-01`).lte('date', `${year}-12-31`).then(({ error }) => {
+        if (error) { console.error(error); toast('Erro ao apagar — pode ter ficado algo pra trás. Recarregue a página.', 'error'); }
+      });
       toast('Lançamentos do ano apagados', 'warn');
     },
 
@@ -330,6 +342,12 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         supabase.from('caixinha_movements').select('*').eq('account_id', accountId),
       ]);
       if (cancelled) return;
+      const loadError = [p, c, pt, tx, d, g, cx, cm].find(r => r.error)?.error;
+      if (loadError) {
+        console.error(loadError);
+        toast('Erro ao carregar seus dados — isso não significa que foram perdidos. Recarregue a página; se persistir, avise.', 'error');
+        return;
+      }
       setPeople((p.data || []).map(peopleFromRow));
       setCategories((c.data || []).map(categoriesFromRow));
       setPaymentTypes((pt.data || []).map(paymentTypesFromRow));
