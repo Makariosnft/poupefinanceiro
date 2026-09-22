@@ -58,6 +58,7 @@ interface StoreCtxValue {
   actions: ReturnType<typeof buildActions>;
   toast: (msg: string, tone?: Toast['tone']) => void;
   toasts: Toast[];
+  lastSaved: number;
 }
 
 const StoreCtx = React.createContext<StoreCtxValue | null>(null);
@@ -70,6 +71,7 @@ function makeCrud<T extends { id: string }>(
   map: Record<string, string>,
   accountIdRef: React.MutableRefObject<string | null>,
   toast: (msg: string, tone?: Toast['tone']) => void,
+  markSaved: () => void,
 ) {
   return {
     add: (item: Omit<T, 'id'>, id = newId()) => {
@@ -79,6 +81,7 @@ function makeCrud<T extends { id: string }>(
       setList(l => [full, ...l]);
       supabase.from(table).insert({ id, account_id: accountId, ...patchToRow(full, map) }).then(({ error }) => {
         if (error) { console.error(error); setList(l => l.filter(x => x.id !== id)); toast(SAVE_ERROR_MSG, 'error'); }
+        else markSaved();
       });
       return full;
     },
@@ -90,7 +93,7 @@ function makeCrud<T extends { id: string }>(
           console.error(error);
           if (prev) { const snapshot = prev; setList(l => l.map(x => (x.id === id ? snapshot : x))); }
           toast(SAVE_ERROR_MSG, 'error');
-        }
+        } else markSaved();
       });
     },
     remove: (id: string) => {
@@ -98,6 +101,7 @@ function makeCrud<T extends { id: string }>(
       setList(l => { removed = l.find(x => x.id === id); return l.filter(x => x.id !== id); });
       supabase.from(table).delete().eq('id', id).then(({ error }) => {
         if (error && removed) { console.error(error); setList(l => [removed as T, ...l]); toast(SAVE_ERROR_MSG, 'error'); }
+        else if (!error) markSaved();
       });
     },
   };
@@ -118,15 +122,16 @@ function buildActions(
   setUi: React.Dispatch<React.SetStateAction<AppState['ui']>>,
   setAccount: React.Dispatch<React.SetStateAction<Account | null>>,
   toast: (msg: string, tone?: Toast['tone']) => void,
+  markSaved: () => void,
 ) {
-  const people = makeCrud<Person>('people', lists.setPeople, PEOPLE_MAP, accountIdRef, toast);
-  const categories = makeCrud<Category>('categories', lists.setCategories, CATEGORIES_MAP, accountIdRef, toast);
-  const paymentTypes = makeCrud<PaymentType>('payment_types', lists.setPaymentTypes, PAYMENT_TYPES_MAP, accountIdRef, toast);
-  const transactions = makeCrud<Transaction>('transactions', lists.setTransactions, TX_MAP, accountIdRef, toast);
-  const debts = makeCrud<Debt>('debts', lists.setDebts, DEBTS_MAP, accountIdRef, toast);
-  const goals = makeCrud<Goal>('goals', lists.setGoals, GOALS_MAP, accountIdRef, toast);
-  const caixinhas = makeCrud<Caixinha>('caixinha', lists.setCaixinhas, CAIXINHA_MAP, accountIdRef, toast);
-  const caixinhaMovements = makeCrud<CaixinhaMovement>('caixinha_movements', lists.setCaixinhaMovements, CAIXINHA_MOVEMENTS_MAP, accountIdRef, toast);
+  const people = makeCrud<Person>('people', lists.setPeople, PEOPLE_MAP, accountIdRef, toast, markSaved);
+  const categories = makeCrud<Category>('categories', lists.setCategories, CATEGORIES_MAP, accountIdRef, toast, markSaved);
+  const paymentTypes = makeCrud<PaymentType>('payment_types', lists.setPaymentTypes, PAYMENT_TYPES_MAP, accountIdRef, toast, markSaved);
+  const transactions = makeCrud<Transaction>('transactions', lists.setTransactions, TX_MAP, accountIdRef, toast, markSaved);
+  const debts = makeCrud<Debt>('debts', lists.setDebts, DEBTS_MAP, accountIdRef, toast, markSaved);
+  const goals = makeCrud<Goal>('goals', lists.setGoals, GOALS_MAP, accountIdRef, toast, markSaved);
+  const caixinhas = makeCrud<Caixinha>('caixinha', lists.setCaixinhas, CAIXINHA_MAP, accountIdRef, toast, markSaved);
+  const caixinhaMovements = makeCrud<CaixinhaMovement>('caixinha_movements', lists.setCaixinhaMovements, CAIXINHA_MOVEMENTS_MAP, accountIdRef, toast, markSaved);
 
   return {
     setMonth: (m: string) => setUi(u => ({ ...u, month: m })),
@@ -146,6 +151,25 @@ function buildActions(
       if (error) toast('E-mail ou senha inválidos.', 'error');
     },
     signOut: async () => { await supabase.auth.signOut(); },
+
+    listMembers: async () => {
+      const { data, error } = await supabase.rpc('list_account_members');
+      if (error) { console.error(error); toast('Não deu pra carregar os membros da conta.', 'error'); return []; }
+      return (data || []) as { user_id: string; email: string; role: string; created_at: string }[];
+    },
+    resetPasswordForEmail: async (email: string) => {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
+      if (error) { toast(error.message, 'error'); return false; }
+      toast('Link de redefinição enviado — confira seu e-mail.');
+      return true;
+    },
+    updatePassword: async (newPassword: string) => {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) { toast(error.message, 'error'); return false; }
+      toast('Senha atualizada.');
+      return true;
+    },
+    finishPasswordRecovery: () => setUi(u => ({ ...u, passwordRecovery: false })),
 
     createAccount: async (name: string) => {
       const { data, error } = await supabase.rpc('create_account', { p_name: name });
@@ -260,7 +284,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const uiPrefs = React.useMemo(loadUiPrefs, []);
   const [ui, setUi] = React.useState<AppState['ui']>({
     month: uiPrefs.month, personId: uiPrefs.personId, activeGoalId: null,
-    authed: false, authLoading: true, accountId: null, accountChecked: false,
+    authed: false, authLoading: true, accountId: null, accountChecked: false, passwordRecovery: false,
   });
   const [account, setAccount] = React.useState<Account | null>(null);
   const [people, setPeople] = React.useState<Person[]>([]);
@@ -272,6 +296,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [caixinhas, setCaixinhas] = React.useState<Caixinha[]>([]);
   const [caixinhaMovements, setCaixinhaMovements] = React.useState<CaixinhaMovement[]>([]);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
+  const [lastSaved, setLastSaved] = React.useState(0);
 
   const accountIdRef = React.useRef<string | null>(null);
   React.useEffect(() => { accountIdRef.current = ui.accountId; }, [ui.accountId]);
@@ -286,12 +311,14 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 2600);
   }, []);
 
+  const markSaved = React.useCallback(() => setLastSaved(Date.now()), []);
+
   const actions = React.useMemo(
     () => buildActions(
       { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals, setCaixinhas, setCaixinhaMovements },
-      accountIdRef, setUi, setAccount, toast,
+      accountIdRef, setUi, setAccount, toast, markSaved,
     ),
-    [toast],
+    [toast, markSaved],
   );
 
   // Sessão de autenticação
@@ -299,8 +326,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     supabase.auth.getSession().then(({ data }) => {
       setUi(u => ({ ...u, authed: !!data.session, authLoading: false }));
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUi(u => ({ ...u, authed: !!session, authLoading: false }));
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      setUi(u => ({ ...u, authed: !!session, authLoading: false, passwordRecovery: event === 'PASSWORD_RECOVERY' ? true : u.passwordRecovery }));
       if (!session) {
         setUi(u => ({ ...u, accountId: null, accountChecked: false }));
         setAccount(null);
@@ -400,7 +427,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, account, ui }),
     [people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, account, ui],
   );
-  const value = React.useMemo(() => ({ state, actions, toast, toasts }), [state, actions, toast, toasts]);
+  const value = React.useMemo(() => ({ state, actions, toast, toasts, lastSaved }), [state, actions, toast, toasts, lastSaved]);
 
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }

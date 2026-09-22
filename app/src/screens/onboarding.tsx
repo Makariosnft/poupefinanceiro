@@ -3,7 +3,7 @@ import logo from '../assets/poupe-logo.png';
 import { useStore } from '../lib/store';
 import { Button, IconBtn, Field, Input, useIsMobile, tokens } from '../components/ui';
 
-const { ink, ink2, muted, paper, paper2, green, blue } = tokens;
+const { ink, ink2, muted, paper, paper2, green, blue, red } = tokens;
 
 const PALETTE = ['#b04a3a', '#7a8a3a', '#3a6a8a', '#2f5a48', '#c79bb0', '#7a6ca8', '#d4a24a', '#5a8a9a', '#c97a3a', '#8a9a5a', '#a86a6a', '#c44a4a', '#d4b48a', '#5a5a8a', '#a85a8a', '#8a6a4a'];
 const BANK_PRESETS = [
@@ -19,8 +19,9 @@ export function Login() {
   const isMobile = useIsMobile();
   const [email, setEmail] = React.useState('');
   const [pass, setPass] = React.useState('');
-  const [mode, setMode] = React.useState<'entrar' | 'criar'>('entrar');
+  const [mode, setMode] = React.useState<'entrar' | 'criar' | 'recuperar'>('entrar');
   const [loading, setLoading] = React.useState(false);
+  const [recoverySent, setRecoverySent] = React.useState(false);
 
   const go = async () => {
     if (!email.trim() || !pass) return;
@@ -28,6 +29,14 @@ export function Login() {
     if (mode === 'entrar') await actions.signIn(email.trim(), pass);
     else await actions.signUp(email.trim(), pass);
     setLoading(false);
+  };
+
+  const sendRecovery = async () => {
+    if (!email.trim()) return;
+    setLoading(true);
+    const ok = await actions.resetPasswordForEmail(email.trim());
+    setLoading(false);
+    if (ok) setRecoverySent(true);
   };
 
   return (
@@ -56,33 +65,102 @@ export function Login() {
       <div style={{ background: paper, display: 'flex', alignItems: isMobile ? 'center' : 'flex-start', justifyContent: 'center', padding: isMobile ? '32px 20px' : '44px 44px', minHeight: isMobile ? '100%' : 0 }}>
         <div style={{ width: '100%', maxWidth: 372, marginTop: 'auto', marginBottom: 'auto' }}>
           {isMobile && <img src={logo} alt="Poupê" style={{ height: 34, width: 'auto', objectFit: 'contain', display: 'block', marginBottom: 22 }} />}
-          <div style={{ fontWeight: 800, fontSize: 25, letterSpacing: '-0.022em' }}>{mode === 'entrar' ? 'Bem-vindo de volta' : 'Criar sua conta'}</div>
-          <div style={{ fontSize: 13, color: muted, marginTop: 6 }}>
-            {mode === 'entrar' ? 'Entre para continuar organizando suas finanças' : 'Comece grátis — leva menos de um minuto'}
-          </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 22 }}>
-            <Field label="e-mail"><Input type="email" value={email} onChange={setEmail} placeholder="voce@email.com" onEnter={go} /></Field>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
-                <span style={{ fontSize: 10.5, color: muted, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>senha</span>
+          {mode === 'recuperar' ? (
+            <>
+              <div style={{ fontWeight: 800, fontSize: 25, letterSpacing: '-0.022em' }}>Recuperar senha</div>
+              <div style={{ fontSize: 13, color: muted, marginTop: 6 }}>
+                {recoverySent ? 'Enviamos um link pro seu e-mail — abra ele pra escolher uma nova senha.' : 'Digite seu e-mail e enviaremos um link pra redefinir sua senha.'}
               </div>
-              <Input type="password" value={pass} onChange={setPass} onEnter={go} />
-            </div>
-          </div>
+              {!recoverySent && (
+                <>
+                  <div style={{ marginTop: 22 }}>
+                    <Field label="e-mail"><Input type="email" value={email} onChange={setEmail} placeholder="voce@email.com" onEnter={sendRecovery} /></Field>
+                  </div>
+                  <div style={{ marginTop: 18 }}>
+                    <Button full size="lg" onClick={sendRecovery} disabled={loading || !email.trim()}>
+                      {loading ? 'enviando…' : 'Enviar link →'}
+                    </Button>
+                  </div>
+                </>
+              )}
+              <div style={{ textAlign: 'center', fontSize: 13, color: muted, marginTop: 18 }}>
+                <span onClick={() => { setMode('entrar'); setRecoverySent(false); }} style={{ color: ink, fontWeight: 700, cursor: 'pointer', borderBottom: `1.5px solid ${ink}` }}>
+                  ← Voltar pro login
+                </span>
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontWeight: 800, fontSize: 25, letterSpacing: '-0.022em' }}>{mode === 'entrar' ? 'Bem-vindo de volta' : 'Criar sua conta'}</div>
+              <div style={{ fontSize: 13, color: muted, marginTop: 6 }}>
+                {mode === 'entrar' ? 'Entre para continuar organizando suas finanças' : 'Comece grátis — leva menos de um minuto'}
+              </div>
 
-          <div style={{ marginTop: 18 }}>
-            <Button full size="lg" onClick={go} disabled={loading || !email.trim() || !pass}>
-              {loading ? 'entrando…' : mode === 'entrar' ? 'Entrar →' : 'Criar conta →'}
-            </Button>
-          </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 22 }}>
+                <Field label="e-mail"><Input type="email" value={email} onChange={setEmail} placeholder="voce@email.com" onEnter={go} /></Field>
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 5 }}>
+                    <span style={{ fontSize: 10.5, color: muted, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>senha</span>
+                    {mode === 'entrar' && (
+                      <span onClick={() => setMode('recuperar')} style={{ fontSize: 11.5, color: muted, cursor: 'pointer', textDecoration: 'underline' }}>esqueci minha senha</span>
+                    )}
+                  </div>
+                  <Input type="password" value={pass} onChange={setPass} onEnter={go} />
+                </div>
+              </div>
 
-          <div style={{ textAlign: 'center', fontSize: 13, color: muted, marginTop: 18 }}>
-            {mode === 'entrar' ? 'Não tem conta? ' : 'Já tem conta? '}
-            <span onClick={() => setMode(mode === 'entrar' ? 'criar' : 'entrar')} style={{ color: ink, fontWeight: 700, cursor: 'pointer', borderBottom: `1.5px solid ${ink}` }}>
-              {mode === 'entrar' ? 'Criar conta grátis' : 'Entrar'}
-            </span>
-          </div>
+              <div style={{ marginTop: 18 }}>
+                <Button full size="lg" onClick={go} disabled={loading || !email.trim() || !pass}>
+                  {loading ? 'entrando…' : mode === 'entrar' ? 'Entrar →' : 'Criar conta →'}
+                </Button>
+              </div>
+
+              <div style={{ textAlign: 'center', fontSize: 13, color: muted, marginTop: 18 }}>
+                {mode === 'entrar' ? 'Não tem conta? ' : 'Já tem conta? '}
+                <span onClick={() => setMode(mode === 'entrar' ? 'criar' : 'entrar')} style={{ color: ink, fontWeight: 700, cursor: 'pointer', borderBottom: `1.5px solid ${ink}` }}>
+                  {mode === 'entrar' ? 'Criar conta grátis' : 'Entrar'}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Redefinir senha (após clicar no link do e-mail) ─────────────────
+export function ResetPasswordScreen() {
+  const { actions } = useStore();
+  const isMobile = useIsMobile();
+  const [pass, setPass] = React.useState('');
+  const [pass2, setPass2] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
+  const valid = pass.length >= 6 && pass === pass2;
+
+  const save = async () => {
+    if (!valid) return;
+    setLoading(true);
+    const ok = await actions.updatePassword(pass);
+    setLoading(false);
+    if (ok) actions.finishPasswordRecovery();
+  };
+
+  return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: paper, fontFamily: 'Montserrat, sans-serif', padding: isMobile ? '32px 20px' : 44 }}>
+      <div style={{ width: '100%', maxWidth: 372 }}>
+        <img src={logo} alt="Poupê" style={{ height: 34, width: 'auto', objectFit: 'contain', display: 'block', marginBottom: 22 }} />
+        <div style={{ fontWeight: 800, fontSize: 25, letterSpacing: '-0.022em' }}>Defina uma nova senha</div>
+        <div style={{ fontSize: 13, color: muted, marginTop: 6 }}>Escolha uma senha nova pra sua conta.</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 22 }}>
+          <Field label="nova senha"><Input type="password" value={pass} onChange={setPass} /></Field>
+          <Field label="confirmar nova senha"><Input type="password" value={pass2} onChange={setPass2} onEnter={save} /></Field>
+        </div>
+        {pass && pass.length < 6 && <div style={{ fontSize: 11.5, color: red, marginTop: 8 }}>a senha precisa ter pelo menos 6 caracteres</div>}
+        {pass2 && pass !== pass2 && <div style={{ fontSize: 11.5, color: red, marginTop: 8 }}>as senhas não coincidem</div>}
+        <div style={{ marginTop: 18 }}>
+          <Button full size="lg" onClick={save} disabled={loading || !valid}>{loading ? 'salvando…' : 'Salvar nova senha →'}</Button>
         </div>
       </div>
     </div>

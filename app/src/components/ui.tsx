@@ -386,6 +386,30 @@ function ToastItem({ msg, tone }: Toast) {
   );
 }
 
+// ── Indicador sutil de "salvo" ──────────────────────────────────────
+export function SaveIndicator() {
+  const { lastSaved } = useStore();
+  const [visible, setVisible] = React.useState(false);
+  React.useEffect(() => {
+    if (!lastSaved) return;
+    setVisible(true);
+    const t = setTimeout(() => setVisible(false), 2200);
+    return () => clearTimeout(t);
+  }, [lastSaved]);
+  return (
+    <div style={{
+      position: 'fixed', top: 8, left: '50%', zIndex: 90, pointerEvents: 'none',
+      transform: `translateX(-50%) translateY(${visible ? '0' : '-10px'})`,
+      opacity: visible ? 0.94 : 0, transition: 'opacity .3s ease, transform .3s ease',
+      background: ink, color: paper, padding: '5px 13px', borderRadius: 99,
+      fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6,
+      boxShadow: '0 4px 14px rgba(0,0,0,.18)', whiteSpace: 'nowrap',
+    }}>
+      <span style={{ color: green }}>✓</span>Alterações salvas
+    </div>
+  );
+}
+
 // ── Segmentado (Comum / Fixo / Parcelamento) ───────────────────────
 export interface KindOption {
   key: string;

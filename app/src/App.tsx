@@ -1,11 +1,11 @@
 import React from 'react';
 import { StoreProvider, useStore } from './lib/store';
-import { Toaster } from './components/ui';
+import { Toaster, SaveIndicator } from './components/ui';
 import { Lancamentos, GastosDoMes, GanhosDoMes, Fixos, Parcelamentos, QuickAddModal } from './screens/transactions';
 import { Dividas, Metas, Relatorios } from './screens/insights';
 import { CaixinhaScreen } from './screens/caixinha';
 import {
-  Login, AccountChoice, CreateAccountScreen, JoinAccountScreen,
+  Login, AccountChoice, CreateAccountScreen, JoinAccountScreen, ResetPasswordScreen,
   People, Categories, PaymentTypes, Done, type OnbStepProps,
 } from './screens/onboarding';
 import { Settings } from './screens/settings';
@@ -54,7 +54,9 @@ function AppShell() {
   }, [state.ui.authed]);
 
   let body: React.ReactNode;
-  if (state.ui.authLoading) {
+  if (state.ui.passwordRecovery) {
+    body = <ResetPasswordScreen />;
+  } else if (state.ui.authLoading) {
     body = <Splash />;
   } else if (!state.ui.authed) {
     body = <Login />;
@@ -95,6 +97,7 @@ function AppShell() {
     <div style={{ height: '100%', position: 'relative' }}>
       {body}
       <Toaster toasts={toasts} />
+      <SaveIndicator />
     </div>
   );
 }

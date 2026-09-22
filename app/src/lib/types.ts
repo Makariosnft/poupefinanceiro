@@ -70,6 +70,7 @@ export interface UIState {
   authLoading: boolean;
   accountId: string | null;
   accountChecked: boolean; // true once we've determined accountId (found or not) for the current session
+  passwordRecovery: boolean; // true right after the user opens a "redefinir senha" e-mail link
 }
 
 export interface Caixinha {
