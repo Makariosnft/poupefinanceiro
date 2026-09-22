@@ -41,10 +41,10 @@ export function Login() {
           <div>
             <img src={logo} alt="Poupê" style={{ height: 50, width: 'auto', objectFit: 'contain', display: 'block', filter: 'invert(1) brightness(2)', marginBottom: 26 }} />
             <div style={{ fontWeight: 800, fontSize: 33, letterSpacing: '-0.028em', lineHeight: 1.15, maxWidth: 400 }}>
-              Suas finanças, organizadas a dois.
+              Suas finanças, organizadas em um só lugar.
             </div>
             <div style={{ fontSize: 14, opacity: 0.75, marginTop: 14, maxWidth: 370, lineHeight: 1.55 }}>
-              Lance gastos em segundos, acompanhe fixos, parcelas, dívidas e metas — tudo num só lugar, pra você e quem divide a vida com você.
+              Lance gastos em segundos, acompanhe fixos, parcelas, dívidas e metas — sozinho ou com quem você dividir a vida.
             </div>
             <div style={{ display: 'flex', gap: 18, fontSize: 11.5, opacity: 0.55, marginTop: 40 }}>
               <span>© 2026 Poupê</span><span>Privacidade</span><span>Termos</span>
