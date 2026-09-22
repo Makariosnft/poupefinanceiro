@@ -89,6 +89,12 @@ export interface CaixinhaMovement {
   date: string; // YYYY-MM-DD
 }
 
+export interface CardInvoicePayment {
+  id: string;
+  paymentTypeId: string;
+  invoiceMonth: string; // YYYY-MM
+}
+
 export interface Account {
   id: string;
   name: string;
@@ -104,6 +110,7 @@ export interface AppState {
   goals: Goal[];
   caixinhas: Caixinha[];
   caixinhaMovements: CaixinhaMovement[];
+  cardInvoicePayments: CardInvoicePayment[];
   account: Account | null;
   ui: UIState;
 }

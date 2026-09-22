@@ -1,10 +1,10 @@
 import React from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import type { Account, AppState, Caixinha, CaixinhaMovement, Category, Debt, Goal, PaymentType, Person, Toast, Transaction } from './types';
+import type { Account, AppState, Caixinha, CaixinhaMovement, CardInvoicePayment, Category, Debt, Goal, PaymentType, Person, Toast, Transaction } from './types';
 import {
-  CAIXINHA_MAP, CAIXINHA_MOVEMENTS_MAP, CATEGORIES_MAP, DATA_TABLES, DEBTS_MAP, GOALS_MAP, PAYMENT_TYPES_MAP, PEOPLE_MAP, TX_MAP,
-  caixinhaFromRow, caixinhaMovementsFromRow, categoriesFromRow, debtsFromRow, goalsFromRow, patchToRow, paymentTypesFromRow, peopleFromRow, txFromRow,
+  CAIXINHA_MAP, CAIXINHA_MOVEMENTS_MAP, CARD_INVOICE_PAYMENTS_MAP, CATEGORIES_MAP, DATA_TABLES, DEBTS_MAP, GOALS_MAP, PAYMENT_TYPES_MAP, PEOPLE_MAP, TX_MAP,
+  caixinhaFromRow, caixinhaMovementsFromRow, cardInvoicePaymentsFromRow, categoriesFromRow, debtsFromRow, goalsFromRow, patchToRow, paymentTypesFromRow, peopleFromRow, txFromRow,
 } from './sync';
 
 const UI_LS_KEY = 'poupe.ui.v1';
@@ -117,6 +117,7 @@ function buildActions(
     setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
     setCaixinhas: React.Dispatch<React.SetStateAction<Caixinha[]>>;
     setCaixinhaMovements: React.Dispatch<React.SetStateAction<CaixinhaMovement[]>>;
+    setCardInvoicePayments: React.Dispatch<React.SetStateAction<CardInvoicePayment[]>>;
   },
   accountIdRef: React.MutableRefObject<string | null>,
   setUi: React.Dispatch<React.SetStateAction<AppState['ui']>>,
@@ -132,6 +133,7 @@ function buildActions(
   const goals = makeCrud<Goal>('goals', lists.setGoals, GOALS_MAP, accountIdRef, toast, markSaved);
   const caixinhas = makeCrud<Caixinha>('caixinha', lists.setCaixinhas, CAIXINHA_MAP, accountIdRef, toast, markSaved);
   const caixinhaMovements = makeCrud<CaixinhaMovement>('caixinha_movements', lists.setCaixinhaMovements, CAIXINHA_MOVEMENTS_MAP, accountIdRef, toast, markSaved);
+  const cardInvoicePayments = makeCrud<CardInvoicePayment>('card_invoice_payments', lists.setCardInvoicePayments, CARD_INVOICE_PAYMENTS_MAP, accountIdRef, toast, markSaved);
 
   return {
     setMonth: (m: string) => setUi(u => ({ ...u, month: m })),
@@ -281,6 +283,15 @@ function buildActions(
       toast(m.amount >= 0 ? 'Aporte registrado' : 'Retirada registrada');
     },
     delCaixinhaMovement: (id: string) => { caixinhaMovements.remove(id); toast('Movimento removido', 'warn'); },
+
+    toggleCardInvoicePaid: (paymentTypeId: string, month: string) => {
+      lists.setCardInvoicePayments(l => {
+        const existing = l.find(x => x.paymentTypeId === paymentTypeId && x.invoiceMonth === month);
+        if (existing) { cardInvoicePayments.remove(existing.id); toast('Fatura marcada como não paga', 'warn'); }
+        else { cardInvoicePayments.add({ paymentTypeId, invoiceMonth: month }); toast('Fatura marcada como paga'); }
+        return l;
+      });
+    },
   };
 }
 
@@ -299,6 +310,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [goals, setGoals] = React.useState<Goal[]>([]);
   const [caixinhas, setCaixinhas] = React.useState<Caixinha[]>([]);
   const [caixinhaMovements, setCaixinhaMovements] = React.useState<CaixinhaMovement[]>([]);
+  const [cardInvoicePayments, setCardInvoicePayments] = React.useState<CardInvoicePayment[]>([]);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
   const [lastSaved, setLastSaved] = React.useState(0);
 
@@ -319,7 +331,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions = React.useMemo(
     () => buildActions(
-      { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals, setCaixinhas, setCaixinhaMovements },
+      { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals, setCaixinhas, setCaixinhaMovements, setCardInvoicePayments },
       accountIdRef, setUi, setAccount, toast, markSaved,
     ),
     [toast, markSaved],
@@ -336,7 +348,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setUi(u => ({ ...u, accountId: null, accountChecked: false }));
         setAccount(null);
         setPeople([]); setCategories([]); setPaymentTypes([]); setTransactions([]); setDebts([]); setGoals([]);
-        setCaixinhas([]); setCaixinhaMovements([]);
+        setCaixinhas([]); setCaixinhaMovements([]); setCardInvoicePayments([]);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -365,7 +377,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { data: acc } = await supabase.from('accounts').select('id,name,invite_code').eq('id', accountId).maybeSingle();
       if (!cancelled && acc) setAccount({ id: acc.id, name: acc.name, inviteCode: acc.invite_code });
 
-      const [p, c, pt, tx, d, g, cx, cm] = await Promise.all([
+      const [p, c, pt, tx, d, g, cx, cm, cip] = await Promise.all([
         supabase.from('people').select('*').eq('account_id', accountId),
         supabase.from('categories').select('*').eq('account_id', accountId),
         supabase.from('payment_types').select('*').eq('account_id', accountId),
@@ -374,9 +386,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         supabase.from('goals').select('*').eq('account_id', accountId),
         supabase.from('caixinha').select('*').eq('account_id', accountId),
         supabase.from('caixinha_movements').select('*').eq('account_id', accountId),
+        supabase.from('card_invoice_payments').select('*').eq('account_id', accountId),
       ]);
       if (cancelled) return;
-      const loadError = [p, c, pt, tx, d, g, cx, cm].find(r => r.error)?.error;
+      const loadError = [p, c, pt, tx, d, g, cx, cm, cip].find(r => r.error)?.error;
       if (loadError) {
         console.error(loadError);
         toast('Erro ao carregar seus dados — isso não significa que foram perdidos. Recarregue a página; se persistir, avise.', 'error');
@@ -392,6 +405,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setGoals((g.data || []).map(goalsFromRow));
       setCaixinhas((cx.data || []).map(caixinhaFromRow));
       setCaixinhaMovements((cm.data || []).map(caixinhaMovementsFromRow));
+      setCardInvoicePayments((cip.data || []).map(cardInvoicePaymentsFromRow));
     })();
 
     const applyChange = <T extends { id: string }>(
@@ -422,14 +436,15 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     wire('goals', setGoals, goalsFromRow);
     wire('caixinha', setCaixinhas, caixinhaFromRow);
     wire('caixinha_movements', setCaixinhaMovements, caixinhaMovementsFromRow);
+    wire('card_invoice_payments', setCardInvoicePayments, cardInvoicePaymentsFromRow);
     channel.subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [ui.accountId]);
 
   const state = React.useMemo<AppState>(
-    () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, account, ui }),
-    [people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, account, ui],
+    () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, cardInvoicePayments, account, ui }),
+    [people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, cardInvoicePayments, account, ui],
   );
   const value = React.useMemo(() => ({ state, actions, toast, toasts, lastSaved }), [state, actions, toast, toasts, lastSaved]);
 
@@ -545,7 +560,12 @@ export function upcoming(state: AppState, month: string, personId = 'all') {
   const today = todayISO();
   const rows: { id: string; kind: 'fixo' | 'parcela'; desc: string; amount: number; date: string; typeId: string; personId: string }[] = [];
   items.fixos.filter(f => !f.paid).forEach(f => rows.push({ id: f.id, kind: 'fixo', desc: f.desc, amount: f.amount, date: f.dueDate, typeId: f.typeId, personId: f.personId }));
-  items.parcelas.forEach(p => rows.push({ id: p.id, kind: 'parcela', desc: `${p.desc} (${p.installment}/${p.totalInstallments})`, amount: p.amount, date: `${month}-${pad(10)}`, typeId: p.typeId, personId: p.personId }));
+  items.parcelas
+    .filter(p => !state.cardInvoicePayments.some(cp => cp.paymentTypeId === p.typeId && cp.invoiceMonth === month))
+    .forEach(p => {
+      const due = state.paymentTypes.find(pt => pt.id === p.typeId)?.due || 10;
+      rows.push({ id: p.id, kind: 'parcela', desc: `${p.desc} (${p.installment}/${p.totalInstallments})`, amount: p.amount, date: `${month}-${pad(Math.min(due, 28))}`, typeId: p.typeId, personId: p.personId });
+    });
   return rows
     .map(r => {
       const diff = Math.round((new Date(r.date + 'T00:00:00').getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000);
@@ -554,6 +574,23 @@ export function upcoming(state: AppState, month: string, personId = 'all') {
       return { ...r, diff, when, urg };
     })
     .sort((a, b) => a.diff - b.diff);
+}
+
+// Fatura de cada cartão nesse mês — soma comuns (já contados pela fatura
+// certa) + parcelas, com o vencimento real do cartão e se já foi paga.
+export function cardInvoices(state: AppState, month: string) {
+  const { items } = totalsFor(state, month);
+  return state.paymentTypes
+    .filter(pt => pt.kind === 'card')
+    .map(pt => {
+      const comuns = items.comuns.filter(c => c.typeId === pt.id);
+      const parcelas = items.parcelas.filter(p => p.typeId === pt.id);
+      const total = [...comuns, ...parcelas].reduce((s, x) => s + Number(x.amount || 0), 0);
+      const paid = state.cardInvoicePayments.some(cp => cp.paymentTypeId === pt.id && cp.invoiceMonth === month);
+      const dueDate = `${month}-${pad(Math.min(pt.due || 10, 28))}`;
+      return { type: pt, total, count: comuns.length + parcelas.length, paid, dueDate };
+    })
+    .filter(c => c.total > 0 || c.paid);
 }
 
 export function healthScore(state: AppState, month: string) {

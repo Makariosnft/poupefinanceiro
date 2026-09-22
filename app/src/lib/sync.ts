@@ -1,4 +1,4 @@
-import type { Caixinha, CaixinhaMovement, Category, Debt, Goal, PaymentType, Person, Transaction } from './types';
+import type { CardInvoicePayment, Caixinha, CaixinhaMovement, Category, Debt, Goal, PaymentType, Person, Transaction } from './types';
 
 // Each data table has a camelCase (app) <-> snake_case (db) field map.
 // `id` and `account_id` are handled separately, not part of these maps.
@@ -16,6 +16,7 @@ export const DEBTS_MAP = { name: 'name', total: 'total', paid: 'paid', rate: 'ra
 export const GOALS_MAP = { name: 'name', emoji: 'emoji', target: 'target', current: 'current', color: 'color', personId: 'person_id' } as const;
 export const CAIXINHA_MAP = { description: 'description' } as const;
 export const CAIXINHA_MOVEMENTS_MAP = { caixinhaId: 'caixinha_id', amount: 'amount', description: 'description', date: 'date' } as const;
+export const CARD_INVOICE_PAYMENTS_MAP = { paymentTypeId: 'payment_type_id', invoiceMonth: 'invoice_month' } as const;
 
 const NUMERIC_FIELDS: Record<string, string[]> = {
   transactions: ['amount'],
@@ -59,5 +60,6 @@ export const debtsFromRow = (r: Record<string, any>): Debt => rowToModel(r, DEBT
 export const goalsFromRow = (r: Record<string, any>): Goal => rowToModel(r, GOALS_MAP, 'goals');
 export const caixinhaFromRow = (r: Record<string, any>): Caixinha => rowToModel(r, CAIXINHA_MAP, 'caixinha');
 export const caixinhaMovementsFromRow = (r: Record<string, any>): CaixinhaMovement => rowToModel(r, CAIXINHA_MOVEMENTS_MAP, 'caixinha_movements');
+export const cardInvoicePaymentsFromRow = (r: Record<string, any>): CardInvoicePayment => rowToModel(r, CARD_INVOICE_PAYMENTS_MAP, 'card_invoice_payments');
 
-export const DATA_TABLES = ['people', 'categories', 'payment_types', 'transactions', 'debts', 'goals', 'caixinha', 'caixinha_movements'] as const;
+export const DATA_TABLES = ['people', 'categories', 'payment_types', 'transactions', 'debts', 'goals', 'caixinha', 'caixinha_movements', 'card_invoice_payments'] as const;

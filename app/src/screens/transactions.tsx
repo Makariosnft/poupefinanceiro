@@ -180,6 +180,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const t = S.totalsFor(state, month, personId);
   const prev = S.totalsFor(state, S.addMonths(month, -1), personId);
   const ups = S.upcoming(state, month, personId).slice(0, 7);
+  const invoices = S.cardInvoices(state, month);
 
   const g = useTxForm('comum');
   const inc = useTxForm('comum');
@@ -300,6 +301,35 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
                 })}
             </div>
           </Card>
+
+          {invoices.length > 0 && (
+            <Card>
+              <CardTitle sub="marque quando pagar a fatura toda">Faturas do cartão</CardTitle>
+              <div>
+                {invoices.map((inv, i) => (
+                  <Row key={inv.type.id} last={i === invoices.length - 1}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '9px 2px', fontSize: 12.5 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{inv.type.name}</div>
+                        <div style={{ fontSize: 10.5, color: muted, marginTop: 1 }}>{inv.count} lançamentos · vence {S.dayLabel(inv.dueDate)}</div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                        <span style={{ fontWeight: 700, fontSize: 13.5, color: inv.paid ? muted : ink, textDecoration: inv.paid ? 'line-through' : 'none' }}>{S.fmt(inv.total)}</span>
+                        <Button
+                          variant={inv.paid ? 'primary' : 'outline'}
+                          tone={inv.paid ? green : undefined}
+                          size="sm"
+                          onClick={() => actions.toggleCardInvoicePaid(inv.type.id, month)}
+                        >
+                          {inv.paid ? 'paga ✓' : 'marcar paga'}
+                        </Button>
+                      </div>
+                    </div>
+                  </Row>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       </div>
       <FAB onClick={onOpenModal} />
