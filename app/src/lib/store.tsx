@@ -446,12 +446,26 @@ export interface ExpandedMonth {
   parcelas: (Transaction & { installment: number })[];
 }
 
+// Compras no cartão entram na fatura do mês seguinte quando passam do dia
+// de fechamento — a data da compra não muda, só o mês em que ela é contada.
+export function invoiceMonth(date: string, closingDay?: number | null): string {
+  const month = monthOf(date);
+  if (!closingDay) return month;
+  const day = Number(date.slice(8, 10));
+  return day > closingDay ? addMonths(month, 1) : month;
+}
+
+function comumMonth(state: AppState, t: Transaction): string {
+  const type = state.paymentTypes.find(p => p.id === t.typeId);
+  return type?.kind === 'card' ? invoiceMonth(t.date, type.closing) : monthOf(t.date);
+}
+
 export function expandMonth(state: AppState, month: string, personId = 'all'): ExpandedMonth {
   const inPerson = (t: Transaction) => personId === 'all' || t.personId === personId;
   const out: ExpandedMonth = { comuns: [], entradas: [], fixos: [], parcelas: [] };
   state.transactions.forEach(t => {
     if (!inPerson(t)) return;
-    if (t.kind === 'comum' && monthOf(t.date) === month) out.comuns.push(t);
+    if (t.kind === 'comum' && comumMonth(state, t) === month) out.comuns.push(t);
     else if (t.kind === 'entrada' && monthOf(t.date) === month) out.entradas.push(t);
     else if (t.kind === 'fixo') {
       if (monthDiff(monthOf(t.date), month) >= 0) {
