@@ -808,7 +808,7 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
               <div style={{ display: 'flex', gap: 6 }}>
                 {(['categoria', 'pagamento', 'pessoa'] as const).map(v => <Chip key={v} active={view === v} onClick={() => setView(v)}>{v}</Chip>)}
               </div>
-            }>{`Quebra por ${view}`}</CardTitle>
+            }>{view === 'categoria' ? 'Gastos por categoria' : `Quebra por ${view}`}</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {rows.length === 0 ? <EmptyState icon="📊" title="Sem dados nesse mês" hint="Lance alguns gastos para ver o relatório." /> :
                 rows.map((r, i) => {
