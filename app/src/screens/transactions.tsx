@@ -258,7 +258,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto', paddingBottom: 56 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
           <Card style={{ background: paper2 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
@@ -434,7 +434,7 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto', paddingBottom: 56 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
           <Card style={{ flex: 1, minHeight: 170 }}>
             <CardTitle sub="clique para filtrar a lista">Por categoria</CardTitle>
             <div style={{ overflow: 'auto', maxHeight: 250 }}>
@@ -541,7 +541,7 @@ export function GanhosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto', paddingBottom: 56 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
           <Card style={{ flex: 1, minHeight: 140 }}>
             <CardTitle sub="salário vs extra">Por tipo</CardTitle>
             {kindRows.length === 0 ? <EmptyState icon="📊" title="Sem dados" /> : kindRows.map(([k, v]) => (
@@ -664,7 +664,7 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
           </div>
         </div>
 
-        <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, overflow: 'auto', minHeight: 0, paddingBottom: 56 }}>
+        <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 12, overflow: isMobile ? 'visible' : 'auto', minHeight: 0, paddingBottom: 56 }}>
           <Card pad={12}>
             <CardTitle sub="progresso do mês">Pagamento dos fixos</CardTitle>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, marginBottom: 4 }}>
@@ -804,7 +804,7 @@ export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto', paddingBottom: 56 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
           <Card pad={12} style={{ flex: 1, minHeight: 170 }}>
             <CardTitle sub="quando cada um termina">Linha de chegada</CardTitle>
             {rows.length === 0 ? <EmptyState icon="🏁" title="Nada em andamento" /> :

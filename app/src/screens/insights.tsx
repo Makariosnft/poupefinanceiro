@@ -874,7 +874,7 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto', paddingBottom: 56 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
           <Card pad={12} style={{ flexShrink: 0 }}>
             <CardTitle sub="resumo do mês">Números do mês</CardTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
