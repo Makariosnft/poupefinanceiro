@@ -1,7 +1,8 @@
 import React from 'react';
 import logo from '../assets/poupe-logo.png';
 import { useStore } from '../lib/store';
-import { Button, IconBtn, Field, Input, useIsMobile, tokens } from '../components/ui';
+import { Button, IconBtn, Field, Input, Modal, useIsMobile, tokens } from '../components/ui';
+import type { Category, PaymentType } from '../lib/types';
 
 const { ink, ink2, muted, paper, paper2, green, blue, red } = tokens;
 
@@ -421,19 +422,34 @@ export function People({ onNext, onBack, onSkip }: OnbStepProps) {
 }
 
 // ── Campos: categorias (reutilizado no onboarding e nas Configurações) ─
+interface RemovedCategory { id: string; name: string; color: string; expectedAmount?: number; affectedIds: string[] }
+
 export function CategoriesFields() {
   const { state, actions } = useStore();
   const [name, setName] = React.useState('');
   const [color, setColor] = React.useState(PALETTE[0]);
-  const [removed, setRemoved] = React.useState<{ id: string; name: string; color: string }[]>([]);
+  const [removed, setRemoved] = React.useState<RemovedCategory[]>([]);
+  const [confirmDelete, setConfirmDelete] = React.useState<Category | null>(null);
 
   const add = () => {
     if (!name.trim()) return;
     actions.addCategory(name.trim(), color);
     setName(''); setColor(PALETTE[Math.floor(Math.random() * PALETTE.length)]);
   };
-  const remove = (c: { id: string; name: string; color: string }) => { setRemoved(r => [...r, c]); actions.delCategory(c.id); };
-  const restore = (c: { id: string; name: string; color: string }) => { setRemoved(r => r.filter(x => x.id !== c.id)); actions.addCategory(c.name, c.color); };
+
+  const usageCount = (id: string) => state.transactions.filter(t => t.categoryId === id).length;
+
+  const doRemove = (c: Category) => {
+    const affectedIds = state.transactions.filter(t => t.categoryId === c.id).map(t => t.id);
+    setRemoved(r => [...r, { id: c.id, name: c.name, color: c.color, expectedAmount: c.expectedAmount, affectedIds }]);
+    actions.delCategory(c.id);
+    setConfirmDelete(null);
+  };
+  const remove = (c: Category) => { if (usageCount(c.id) > 0) setConfirmDelete(c); else doRemove(c); };
+  const restore = (c: RemovedCategory) => {
+    setRemoved(r => r.filter(x => x.id !== c.id));
+    actions.restoreCategory({ id: c.id, name: c.name, color: c.color, expectedAmount: c.expectedAmount }, c.affectedIds);
+  };
 
   return (
     <>
@@ -472,7 +488,7 @@ export function CategoriesFields() {
 
         {removed.length > 0 && (
           <div>
-            <div style={{ fontSize: 10.5, color: muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 9 }}>você ocultou</div>
+            <div style={{ fontSize: 10.5, color: muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 9 }}>você apagou — clique pra desfazer</div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
               {removed.map(c => (
                 <span key={c.id} onClick={() => restore(c)} style={{
@@ -480,7 +496,8 @@ export function CategoriesFields() {
                   border: `1.4px dashed ${ink2}55`, borderRadius: 99, fontSize: 12.5, color: muted, cursor: 'pointer', transition: 'all .15s',
                 }}>
                   <span style={{ width: 19, height: 19, borderRadius: 99, background: `${c.color}55`, flexShrink: 0 }} />
-                  {c.name}<span style={{ color: green, fontWeight: 800, fontSize: 13 }}>+</span>
+                  {c.name}{c.affectedIds.length > 0 && <span style={{ fontSize: 10 }}>({c.affectedIds.length})</span>}
+                  <span style={{ color: green, fontWeight: 800, fontSize: 13 }}>↺</span>
                 </span>
               ))}
             </div>
@@ -494,6 +511,16 @@ export function CategoriesFields() {
           </div>
         </div>
       </div>
+
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Apagar categoria" width={380}>
+        <div style={{ fontSize: 13, marginBottom: 16 }}>
+          A categoria <b>{confirmDelete?.name}</b> está usada em <b>{confirmDelete ? usageCount(confirmDelete.id) : 0} lançamentos</b>. Eles não são apagados, só ficam sem categoria (dá pra desfazer logo em seguida). Apagar mesmo assim?
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="ghost" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
+          <Button tone={red} onClick={() => confirmDelete && doRemove(confirmDelete)}>Apagar mesmo assim</Button>
+        </div>
+      </Modal>
     </>
   );
 }
@@ -511,12 +538,16 @@ export function Categories({ onNext, onBack, onSkip }: OnbStepProps) {
 }
 
 // ── Campos: formas de pagamento (reutilizado no onboarding e nas Configurações) ─
+interface RemovedPaymentType { id: string; name: string; color: string; kind: 'base' | 'card'; closing?: number; due?: number; affectedIds: string[] }
+
 export function PaymentTypesFields() {
   const { state, actions } = useStore();
   const [cardName, setCardName] = React.useState('');
   const [cardColor, setCardColor] = React.useState('#8a3ffc');
   const [closing, setClosing] = React.useState('15');
   const [due, setDue] = React.useState('22');
+  const [removed, setRemoved] = React.useState<RemovedPaymentType[]>([]);
+  const [confirmDelete, setConfirmDelete] = React.useState<PaymentType | null>(null);
 
   const base = state.paymentTypes.filter(t => t.kind === 'base');
   const cards = state.paymentTypes.filter(t => t.kind === 'card');
@@ -527,6 +558,19 @@ export function PaymentTypesFields() {
     const n = (name || cardName).trim(); if (!n) return;
     actions.addPaymentType({ name: n, kind: 'card', color: color || cardColor, closing: Number(closing) || 15, due: Number(due) || 22 });
     setCardName('');
+  };
+
+  const usageCount = (id: string) => state.transactions.filter(t => t.typeId === id).length;
+  const doRemove = (t: PaymentType) => {
+    const affectedIds = state.transactions.filter(x => x.typeId === t.id).map(x => x.id);
+    setRemoved(r => [...r, { id: t.id, name: t.name, color: t.color, kind: t.kind, closing: t.closing, due: t.due, affectedIds }]);
+    actions.delPaymentType(t.id);
+    setConfirmDelete(null);
+  };
+  const removeType = (t: PaymentType) => { if (usageCount(t.id) > 0) setConfirmDelete(t); else doRemove(t); };
+  const restoreType = (t: RemovedPaymentType) => {
+    setRemoved(r => r.filter(x => x.id !== t.id));
+    actions.restorePaymentType({ id: t.id, name: t.name, color: t.color, kind: t.kind, closing: t.closing, due: t.due }, t.affectedIds);
   };
 
   return (
@@ -544,7 +588,7 @@ export function PaymentTypesFields() {
                   {t.name === 'Dinheiro' ? '💵' : t.name === 'PIX' ? '⚡' : t.name === 'Boleto' ? '🧾' : '🏧'}
                 </span>
                 {t.name}
-                <span onClick={() => actions.delPaymentType(t.id)} style={{ opacity: 0.5, cursor: 'pointer', fontSize: 14, marginLeft: 1 }}>×</span>
+                <span onClick={() => removeType(t)} style={{ opacity: 0.5, cursor: 'pointer', fontSize: 14, marginLeft: 1 }}>×</span>
               </span>
             ))}
             {missingBase.map(n => (
@@ -581,7 +625,7 @@ export function PaymentTypesFields() {
                     <div style={{ fontSize: 9, opacity: 0.7, letterSpacing: '0.1em', textTransform: 'uppercase' }}>cartão</div>
                     <div style={{ fontWeight: 700, fontSize: 16, letterSpacing: '-0.015em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
                   </div>
-                  <span onClick={() => actions.delPaymentType(c.id)} style={{ fontSize: 15, opacity: 0.7, cursor: 'pointer', flexShrink: 0 }}>×</span>
+                  <span onClick={() => removeType(c)} style={{ fontSize: 15, opacity: 0.7, cursor: 'pointer', flexShrink: 0 }}>×</span>
                 </div>
                 <div style={{ display: 'flex', gap: 10, marginTop: 12, fontSize: 10.5, opacity: 0.92, position: 'relative', alignItems: 'center' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -633,7 +677,35 @@ export function PaymentTypesFields() {
             </div>
           )}
         </div>
+
+        {removed.length > 0 && (
+          <div>
+            <div style={{ fontSize: 10.5, color: muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 9 }}>você apagou — clique pra desfazer</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {removed.map(t => (
+                <span key={t.id} onClick={() => restoreType(t)} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7, padding: '6px 11px 6px 7px',
+                  border: `1.4px dashed ${ink2}55`, borderRadius: 99, fontSize: 12.5, color: muted, cursor: 'pointer', transition: 'all .15s',
+                }}>
+                  <span style={{ width: 19, height: 19, borderRadius: 99, background: `${t.color}55`, flexShrink: 0 }} />
+                  {t.kind === 'card' ? '💳 ' : ''}{t.name}{t.affectedIds.length > 0 && <span style={{ fontSize: 10 }}>({t.affectedIds.length})</span>}
+                  <span style={{ color: green, fontWeight: 800, fontSize: 13 }}>↺</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
+
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Apagar forma de pagamento" width={380}>
+        <div style={{ fontSize: 13, marginBottom: 16 }}>
+          <b>{confirmDelete?.name}</b> está usado(a) em <b>{confirmDelete ? usageCount(confirmDelete.id) : 0} lançamentos</b>. Eles não são apagados, só ficam sem forma de pagamento (dá pra desfazer logo em seguida). Apagar mesmo assim?
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="ghost" onClick={() => setConfirmDelete(null)}>Cancelar</Button>
+          <Button tone={red} onClick={() => confirmDelete && doRemove(confirmDelete)}>Apagar mesmo assim</Button>
+        </div>
+      </Modal>
     </>
   );
 }

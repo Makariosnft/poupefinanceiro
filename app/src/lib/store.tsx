@@ -221,9 +221,19 @@ function buildActions(
     addCategory: (name: string, color: string) => { categories.add({ name, color }); toast(`Categoria "${name}" criada`); },
     updateCategory: (id: string, patch: Partial<Category>) => categories.update(id, patch),
     delCategory: (id: string) => categories.remove(id),
+    restoreCategory: (item: Category, affectedTxIds: string[]) => {
+      categories.add({ name: item.name, color: item.color, expectedAmount: item.expectedAmount }, item.id);
+      affectedTxIds.forEach(txId => transactions.update(txId, { categoryId: item.id }));
+      toast(`Categoria "${item.name}" restaurada${affectedTxIds.length ? ` — ${affectedTxIds.length} lançamentos reconectados` : ''}`);
+    },
     addPaymentType: (t: Omit<PaymentType, 'id'>) => { paymentTypes.add(t); toast(`${t.name} adicionado`); },
     updatePaymentType: (id: string, patch: Partial<PaymentType>) => paymentTypes.update(id, patch),
     delPaymentType: (id: string) => paymentTypes.remove(id),
+    restorePaymentType: (item: PaymentType, affectedTxIds: string[]) => {
+      paymentTypes.add({ name: item.name, kind: item.kind, color: item.color, closing: item.closing, due: item.due }, item.id);
+      affectedTxIds.forEach(txId => transactions.update(txId, { typeId: item.id }));
+      toast(`"${item.name}" restaurado(a)${affectedTxIds.length ? ` — ${affectedTxIds.length} lançamentos reconectados` : ''}`);
+    },
     addPerson: (name: string, color: string) => { people.add({ name, color }); toast(`${name} adicionado(a)`); },
     delPerson: (id: string) => {
       people.remove(id);
