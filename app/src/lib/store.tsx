@@ -221,16 +221,38 @@ function buildActions(
     addCategory: (name: string, color: string) => { categories.add({ name, color }); toast(`Categoria "${name}" criada`); },
     updateCategory: (id: string, patch: Partial<Category>) => categories.update(id, patch),
     delCategory: (id: string) => categories.remove(id),
-    restoreCategory: (item: Category, affectedTxIds: string[]) => {
-      categories.add({ name: item.name, color: item.color, expectedAmount: item.expectedAmount }, item.id);
+    restoreCategory: async (item: Category, affectedTxIds: string[]) => {
+      const accountId = accountIdRef.current;
+      if (!accountId) { toast('Sua conta ainda está carregando — tente de novo em instantes.', 'error'); return; }
+      lists.setCategories(l => [item, ...l]);
+      const { error } = await supabase.from('categories').insert({ id: item.id, account_id: accountId, ...patchToRow(item, CATEGORIES_MAP) });
+      if (error) {
+        console.error(error);
+        lists.setCategories(l => l.filter(x => x.id !== item.id));
+        toast('Não foi possível restaurar a categoria.', 'error');
+        return;
+      }
+      markSaved();
+      // só reconecta os lançamentos depois que a categoria existe de verdade no
+      // banco — senão a foreign key rejeita a reconexão que chegar primeiro
       affectedTxIds.forEach(txId => transactions.update(txId, { categoryId: item.id }));
       toast(`Categoria "${item.name}" restaurada${affectedTxIds.length ? ` — ${affectedTxIds.length} lançamentos reconectados` : ''}`);
     },
     addPaymentType: (t: Omit<PaymentType, 'id'>) => { paymentTypes.add(t); toast(`${t.name} adicionado`); },
     updatePaymentType: (id: string, patch: Partial<PaymentType>) => paymentTypes.update(id, patch),
     delPaymentType: (id: string) => paymentTypes.remove(id),
-    restorePaymentType: (item: PaymentType, affectedTxIds: string[]) => {
-      paymentTypes.add({ name: item.name, kind: item.kind, color: item.color, closing: item.closing, due: item.due }, item.id);
+    restorePaymentType: async (item: PaymentType, affectedTxIds: string[]) => {
+      const accountId = accountIdRef.current;
+      if (!accountId) { toast('Sua conta ainda está carregando — tente de novo em instantes.', 'error'); return; }
+      lists.setPaymentTypes(l => [item, ...l]);
+      const { error } = await supabase.from('payment_types').insert({ id: item.id, account_id: accountId, ...patchToRow(item, PAYMENT_TYPES_MAP) });
+      if (error) {
+        console.error(error);
+        lists.setPaymentTypes(l => l.filter(x => x.id !== item.id));
+        toast('Não foi possível restaurar a forma de pagamento.', 'error');
+        return;
+      }
+      markSaved();
       affectedTxIds.forEach(txId => transactions.update(txId, { typeId: item.id }));
       toast(`"${item.name}" restaurado(a)${affectedTxIds.length ? ` — ${affectedTxIds.length} lançamentos reconectados` : ''}`);
     },
