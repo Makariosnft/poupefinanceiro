@@ -805,22 +805,24 @@ export function Parcelamentos({ onNavigate, onOpenModal }: ScreenProps) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
-          <Card pad={12} style={{ flex: 1, minHeight: 170 }}>
+          <Card pad={12} style={{ maxHeight: 260, display: 'flex', flexDirection: 'column' }}>
             <CardTitle sub="quando cada um termina">Linha de chegada</CardTitle>
-            {rows.length === 0 ? <EmptyState icon="🏁" title="Nada em andamento" /> :
-              rows.map((r, i) => {
-                const left = r.totalInstallments! - r.installment;
-                return (
-                  <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < rows.length - 1 ? `1px dashed ${ink2}33` : 'none', fontSize: 12 }}>
-                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
-                      <span style={{ width: 7, height: 7, borderRadius: 99, background: catColor(r.categoryId), display: 'inline-block', marginRight: 6 }} />{r.desc}
-                    </span>
-                    <span style={{ color: left <= 1 ? green : muted, fontWeight: 700, whiteSpace: 'nowrap' }}>
-                      {left === 0 ? 'acaba agora' : `+${left}x · ${S.monthShort(S.addMonths(month, left))}`}
-                    </span>
-                  </div>
-                );
-              })}
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              {rows.length === 0 ? <EmptyState icon="🏁" title="Nada em andamento" /> :
+                rows.map((r, i) => {
+                  const left = r.totalInstallments! - r.installment;
+                  return (
+                    <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: i < rows.length - 1 ? `1px dashed ${ink2}33` : 'none', fontSize: 12 }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginRight: 8 }}>
+                        <span style={{ width: 7, height: 7, borderRadius: 99, background: catColor(r.categoryId), display: 'inline-block', marginRight: 6 }} />{r.desc}
+                      </span>
+                      <span style={{ color: left <= 1 ? green : muted, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                        {left === 0 ? 'acaba agora' : `+${left}x · ${S.monthShort(S.addMonths(month, left))}`}
+                      </span>
+                    </div>
+                  );
+                })}
+            </div>
           </Card>
 
           <PersonSpendCard rows={perPerson} sub="compromisso mensal" />
