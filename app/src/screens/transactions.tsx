@@ -435,9 +435,9 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
-          <Card style={{ flex: 1, minHeight: 170 }}>
+          <Card style={{ maxHeight: 300, display: 'flex', flexDirection: 'column' }}>
             <CardTitle sub="clique para filtrar a lista">Por categoria</CardTitle>
-            <div style={{ overflow: 'auto', maxHeight: 250 }}>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {catRows.length === 0 ? <EmptyState icon="📊" title="Sem dados" /> : catRows.map(r => (
                 <div key={r.id} onClick={() => setCatFilter(catFilter === r.id ? '' : r.id)}
                   style={{ marginBottom: 9, cursor: 'pointer', opacity: catFilter && catFilter !== r.id ? 0.45 : 1, transition: 'opacity .15s' }}>
