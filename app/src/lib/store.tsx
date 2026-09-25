@@ -161,6 +161,12 @@ function buildActions(
       if (error) { console.error(error); toast('Não deu pra carregar os membros da conta.', 'error'); return []; }
       return (data || []) as { user_id: string; email: string; role: string; created_at: string }[];
     },
+    removeMember: async (userId: string) => {
+      const { error } = await supabase.rpc('remove_account_member', { p_user_id: userId });
+      if (error) { console.error(error); toast(error.message || 'Não foi possível remover o acesso.', 'error'); return false; }
+      toast('Acesso removido.', 'warn');
+      return true;
+    },
     resetPasswordForEmail: async (email: string) => {
       const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin });
       if (error) { toast(error.message, 'error'); return false; }

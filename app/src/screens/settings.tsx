@@ -1,6 +1,7 @@
 import React from 'react';
-import { TopBar, Chip, Button, Field, Input, tokens } from '../components/ui';
+import { TopBar, Chip, Button, Field, Input, Modal, IconBtn, tokens } from '../components/ui';
 import { useStore } from '../lib/store';
+import { supabase } from '../lib/supabase';
 import { PeopleFields, CategoriesFields, PaymentTypesFields } from './onboarding';
 
 const { ink, ink2, muted, paper, paper2, red } = tokens;
@@ -53,11 +54,29 @@ interface Member { user_id: string; email: string; role: string; created_at: str
 function MembersFields() {
   const { actions, toast } = useStore();
   const [members, setMembers] = React.useState<Member[] | null>(null);
+  const [myUserId, setMyUserId] = React.useState<string | null>(null);
+  const [removeTarget, setRemoveTarget] = React.useState<Member | null>(null);
+  const [removing, setRemoving] = React.useState(false);
   const [pass, setPass] = React.useState('');
   const [pass2, setPass2] = React.useState('');
   const [savingPass, setSavingPass] = React.useState(false);
 
-  React.useEffect(() => { actions.listMembers().then(setMembers); }, [actions]);
+  const refreshMembers = React.useCallback(() => { actions.listMembers().then(setMembers); }, [actions]);
+  React.useEffect(() => {
+    refreshMembers();
+    supabase.auth.getUser().then(({ data }) => setMyUserId(data.user?.id ?? null));
+  }, [refreshMembers]);
+
+  const iAmOwner = members?.find(m => m.user_id === myUserId)?.role === 'owner';
+
+  const confirmRemove = async () => {
+    if (!removeTarget) return;
+    setRemoving(true);
+    const ok = await actions.removeMember(removeTarget.user_id);
+    setRemoving(false);
+    setRemoveTarget(null);
+    if (ok) refreshMembers();
+  };
 
   const changePassword = async () => {
     if (pass.length < 6) { toast('A senha precisa ter pelo menos 6 caracteres.', 'warn'); return; }
@@ -79,12 +98,27 @@ function MembersFields() {
             {members.map(m => (
               <div key={m.user_id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', border: `1.5px solid ${ink}`, borderRadius: 10, background: paper2 }}>
                 <span style={{ fontSize: 13, fontWeight: 600 }}>{m.email}</span>
-                <span style={{ fontSize: 10.5, color: muted, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>{m.role === 'owner' ? 'dono(a)' : 'membro'}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 10.5, color: muted, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 700 }}>{m.role === 'owner' ? 'dono(a)' : 'membro'}</span>
+                  {iAmOwner && m.user_id !== myUserId && (
+                    <IconBtn onClick={() => setRemoveTarget(m)} title={`Remover acesso de ${m.email}`} tone={red} size={22}>×</IconBtn>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      <Modal open={!!removeTarget} onClose={() => setRemoveTarget(null)} title="Remover acesso" width={380}>
+        <div style={{ fontSize: 13, marginBottom: 16 }}>
+          Tem certeza que quer remover o acesso de <b>{removeTarget?.email}</b>? A pessoa não vai mais conseguir entrar nessa conta — os lançamentos que ela já fez continuam salvos.
+        </div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <Button variant="ghost" onClick={() => setRemoveTarget(null)}>Cancelar</Button>
+          <Button tone={red} onClick={confirmRemove} disabled={removing}>{removing ? 'removendo…' : 'Remover acesso'}</Button>
+        </div>
+      </Modal>
 
       <div style={{ paddingTop: 6, borderTop: `1px dashed ${ink2}2e` }}>
         <div style={{ fontSize: 10.5, color: muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>trocar senha</div>
