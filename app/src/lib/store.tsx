@@ -36,9 +36,38 @@ export const addMonths = (m: string, n: number) => {
 };
 export const monthLabel = (m: string) => `${MONTHS_FULL[Number(m.slice(5, 7)) - 1]} ${m.slice(0, 4)}`;
 export const monthShort = (m: string) => `${MONTHS_PT[Number(m.slice(5, 7)) - 1]}/${m.slice(2, 4)}`;
+
+// ── Moeda ──────────────────────────────────────────────────────────
+export const CURRENCIES = [
+  { code: 'BRL', label: 'Real brasileiro (R$)', locale: 'pt-BR' },
+  { code: 'EUR', label: 'Euro (€)', locale: 'pt-PT' },
+  { code: 'USD', label: 'Dólar americano ($)', locale: 'en-US' },
+  { code: 'GBP', label: 'Libra esterlina (£)', locale: 'en-GB' },
+  { code: 'CHF', label: 'Franco suíço (CHF)', locale: 'de-CH' },
+  { code: 'CAD', label: 'Dólar canadense ($)', locale: 'en-CA' },
+  { code: 'AUD', label: 'Dólar australiano ($)', locale: 'en-AU' },
+  { code: 'JPY', label: 'Iene japonês (¥)', locale: 'ja-JP' },
+  { code: 'CNY', label: 'Yuan chinês (¥)', locale: 'zh-CN' },
+  { code: 'ARS', label: 'Peso argentino ($)', locale: 'es-AR' },
+  { code: 'MXN', label: 'Peso mexicano ($)', locale: 'es-MX' },
+  { code: 'CLP', label: 'Peso chileno ($)', locale: 'es-CL' },
+  { code: 'COP', label: 'Peso colombiano ($)', locale: 'es-CO' },
+  { code: 'PEN', label: 'Sol peruano (S/)', locale: 'es-PE' },
+  { code: 'UYU', label: 'Peso uruguaio ($)', locale: 'es-UY' },
+] as const;
+export const DEFAULT_CURRENCY = 'BRL';
+
+let activeCurrency: typeof CURRENCIES[number] = CURRENCIES[0];
+export function setActiveCurrency(code: string | undefined | null) {
+  activeCurrency = CURRENCIES.find(c => c.code === code) || CURRENCIES[0];
+}
 export const fmt = (n: number) =>
-  'R$ ' + (n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  (n || 0).toLocaleString(activeCurrency.locale, { style: 'currency', currency: activeCurrency.code });
 export const fmt0 = fmt;
+export const currencySymbol = () => {
+  const parts = new Intl.NumberFormat(activeCurrency.locale, { style: 'currency', currency: activeCurrency.code }).formatToParts(0);
+  return parts.find(p => p.type === 'currency')?.value || activeCurrency.code;
+};
 export const dayLabel = (iso: string) => `${Number(iso.slice(8, 10))} ${MONTHS_PT[Number(iso.slice(5, 7)) - 1].toLowerCase()}`;
 
 function loadUiPrefs() {
@@ -181,13 +210,21 @@ function buildActions(
     },
     finishPasswordRecovery: () => setUi(u => ({ ...u, passwordRecovery: false })),
 
-    createAccount: async (name: string) => {
-      const { data, error } = await supabase.rpc('create_account', { p_name: name });
+    createAccount: async (name: string, currency: string = DEFAULT_CURRENCY) => {
+      const { data, error } = await supabase.rpc('create_account', { p_name: name, p_currency: currency });
       const row = data && data[0];
       if (error || !row) { console.error(error); toast(error?.message || 'Erro ao criar conta.', 'error'); return null; }
-      setAccount({ id: row.account_id, name, inviteCode: row.invite_code });
+      setAccount({ id: row.account_id, name, inviteCode: row.invite_code, currency });
       setUi(u => ({ ...u, accountId: row.account_id }));
       return row.account_id as string;
+    },
+    updateAccountCurrency: async (currency: string) => {
+      const accountId = accountIdRef.current;
+      if (!accountId) return;
+      setAccount(a => (a ? { ...a, currency } : a));
+      const { error } = await supabase.from('accounts').update({ currency }).eq('id', accountId);
+      if (error) { console.error(error); toast('Não foi possível trocar a moeda.', 'error'); return; }
+      toast('Moeda atualizada');
     },
     joinAccount: async (code: string) => {
       const { data, error } = await supabase.rpc('join_account_by_code', { p_code: code.trim() });
@@ -432,8 +469,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     let cancelled = false;
 
     (async () => {
-      const { data: acc } = await supabase.from('accounts').select('id,name,invite_code').eq('id', accountId).maybeSingle();
-      if (!cancelled && acc) setAccount({ id: acc.id, name: acc.name, inviteCode: acc.invite_code });
+      const { data: acc } = await supabase.from('accounts').select('id,name,invite_code,currency').eq('id', accountId).maybeSingle();
+      if (!cancelled && acc) setAccount({ id: acc.id, name: acc.name, inviteCode: acc.invite_code, currency: acc.currency || DEFAULT_CURRENCY });
 
       const [p, c, pt, tx, d, g, cx, cm, cip, ba] = await Promise.all([
         supabase.from('people').select('*').eq('account_id', accountId),
@@ -502,6 +539,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
     return () => { cancelled = true; supabase.removeChannel(channel); };
   }, [ui.accountId]);
+
+  setActiveCurrency(account?.currency);
 
   const state = React.useMemo<AppState>(
     () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, cardInvoicePayments, balanceAdjustments, account, ui }),

@@ -107,6 +107,7 @@ export interface Account {
   id: string;
   name: string;
   inviteCode: string;
+  currency: string; // ISO 4217, ex.: 'BRL', 'EUR'
 }
 
 export interface AppState {

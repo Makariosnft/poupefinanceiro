@@ -1,6 +1,6 @@
 import React from 'react';
 import logo from '../assets/poupe-logo.png';
-import { useStore, MONTHS_PT, addMonths, monthLabel, fmt } from '../lib/store';
+import { useStore, MONTHS_PT, addMonths, monthLabel, fmt, currencySymbol } from '../lib/store';
 import type { Toast, Person } from '../lib/types';
 
 export const ink = '#1a1815';
@@ -135,12 +135,30 @@ interface InputProps {
 
 export function Input({ value, onChange, placeholder, type = 'text', onEnter, accent = ink, style = {}, ...rest }: InputProps) {
   const [f, setF] = React.useState(false);
+  const [show, setShow] = React.useState(false);
+
+  if (type !== 'password') {
+    return (
+      <input {...rest} type={type} value={value} placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setF(true)} onBlur={() => setF(false)}
+        onKeyDown={e => { if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter(); } }}
+        style={{ ...fieldBase, borderColor: f ? accent : `${ink2}55`, boxShadow: f ? `0 0 0 3px ${accent}1f` : 'none', ...style }} />
+    );
+  }
+
   return (
-    <input {...rest} type={type} value={value} placeholder={placeholder}
-      onChange={e => onChange(e.target.value)}
-      onFocus={() => setF(true)} onBlur={() => setF(false)}
-      onKeyDown={e => { if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter(); } }}
-      style={{ ...fieldBase, borderColor: f ? accent : `${ink2}55`, boxShadow: f ? `0 0 0 3px ${accent}1f` : 'none', ...style }} />
+    <div style={{ position: 'relative', minWidth: 0, ...style }}>
+      <input {...rest} type={show ? 'text' : 'password'} value={value} placeholder={placeholder}
+        onChange={e => onChange(e.target.value)}
+        onFocus={() => setF(true)} onBlur={() => setF(false)}
+        onKeyDown={e => { if (e.key === 'Enter' && onEnter) { e.preventDefault(); onEnter(); } }}
+        style={{ ...fieldBase, paddingRight: 36, borderColor: f ? accent : `${ink2}55`, boxShadow: f ? `0 0 0 3px ${accent}1f` : 'none' }} />
+      <button type="button" onClick={() => setShow(s => !s)} title={show ? 'ocultar senha' : 'mostrar senha'}
+        style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', cursor: 'pointer', fontSize: 15, padding: 5, opacity: show ? 0.9 : 0.5, lineHeight: 1 }}>
+        👁
+      </button>
+    </div>
   );
 }
 
@@ -156,7 +174,7 @@ export function MoneyInput({ value, onChange, onEnter, accent = green, style = {
   const [f, setF] = React.useState(false);
   return (
     <div style={{ position: 'relative', minWidth: 0, ...style }}>
-      <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: muted, fontWeight: 600, pointerEvents: 'none' }}>R$</span>
+      <span style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', fontSize: 12, color: muted, fontWeight: 600, pointerEvents: 'none' }}>{currencySymbol()}</span>
       <input type="number" step="0.01" min="0" value={value} placeholder="0,00"
         onChange={e => onChange(e.target.value)}
         onFocus={() => setF(true)} onBlur={() => setF(false)}

@@ -1,7 +1,7 @@
 import React from 'react';
 import logo from '../assets/poupe-logo.png';
-import { useStore } from '../lib/store';
-import { Button, IconBtn, Field, Input, Modal, useIsMobile, tokens } from '../components/ui';
+import { useStore, CURRENCIES, DEFAULT_CURRENCY } from '../lib/store';
+import { Button, IconBtn, Field, Input, Modal, Select, useIsMobile, tokens } from '../components/ui';
 import type { Category, PaymentType } from '../lib/types';
 
 const { ink, ink2, muted, paper, paper2, green, blue, red } = tokens;
@@ -274,6 +274,7 @@ export function AccountChoice({ onCreate, onJoin }: { onCreate: () => void; onJo
 export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
   const { state, actions, toast } = useStore();
   const [name, setName] = React.useState('');
+  const [currency, setCurrency] = React.useState<string>(DEFAULT_CURRENCY);
   const [loading, setLoading] = React.useState(false);
   const [code, setCode] = React.useState<string | null>(null);
   const [copied, setCopied] = React.useState(false);
@@ -281,7 +282,7 @@ export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void;
   const create = async () => {
     if (!name.trim()) return;
     setLoading(true);
-    const id = await actions.createAccount(name.trim());
+    const id = await actions.createAccount(name.trim(), currency);
     setLoading(false);
     if (id) setCode(state.account?.inviteCode ?? null);
   };
@@ -313,8 +314,11 @@ export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void;
       <div style={{ fontSize: 11.5, color: blue, letterSpacing: '0.18em', textTransform: 'uppercase', fontWeight: 700 }}>Nova conta</div>
       <div style={{ fontWeight: 800, letterSpacing: '-0.028em', fontSize: 32, lineHeight: 1.1, maxWidth: 560 }}>Como vamos chamar essa conta?</div>
       <div style={{ fontSize: 14, color: ink2, maxWidth: 440, lineHeight: 1.5 }}>Ex: "Davi & Eduarda" — só pra você reconhecer depois, se tiver mais de uma.</div>
-      <div style={{ width: '100%', maxWidth: 340 }}>
+      <div style={{ width: '100%', maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <Input value={name} onChange={setName} placeholder="Nome da conta" onEnter={create} />
+        <Field label="moeda">
+          <Select value={currency} onChange={setCurrency} options={CURRENCIES.map(c => ({ value: c.code, label: c.label }))} />
+        </Field>
       </div>
       <div style={{ display: 'flex', gap: 10 }}>
         <Button variant="ghost" onClick={onBack}>← voltar</Button>

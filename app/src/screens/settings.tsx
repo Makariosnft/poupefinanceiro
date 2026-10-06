@@ -1,6 +1,6 @@
 import React from 'react';
-import { TopBar, Chip, Button, Field, Input, Modal, IconBtn, tokens } from '../components/ui';
-import { useStore } from '../lib/store';
+import { TopBar, Chip, Button, Field, Input, Modal, IconBtn, Select, tokens } from '../components/ui';
+import { useStore, CURRENCIES, DEFAULT_CURRENCY } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import { PeopleFields, CategoriesFields, PaymentTypesFields } from './onboarding';
 
@@ -21,7 +21,7 @@ const SUBTABS = [
 type SubTab = typeof SUBTABS[number]['key'];
 
 function ContaFields() {
-  const { state, toast } = useStore();
+  const { state, actions, toast } = useStore();
   const [copied, setCopied] = React.useState(false);
   const code = state.account?.inviteCode || '';
 
@@ -44,6 +44,17 @@ function ContaFields() {
           }}>{code}</div>
           <Button variant="outline" size="sm" onClick={copy}>{copied ? 'copiado ✓' : 'copiar convite'}</Button>
         </div>
+      </div>
+
+      <div style={{ padding: 15, border: `1.5px solid ${ink}`, borderRadius: 12, background: paper2 }}>
+        <div style={{ fontSize: 10.5, color: muted, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 700, marginBottom: 8 }}>moeda</div>
+        <Select
+          value={state.account?.currency || DEFAULT_CURRENCY}
+          onChange={v => actions.updateAccountCurrency(v)}
+          options={CURRENCIES.map(c => ({ value: c.code, label: c.label }))}
+          style={{ maxWidth: 280 }}
+        />
+        <div style={{ fontSize: 11, color: muted, marginTop: 7 }}>vale pra todos os valores do site, pra todo mundo que tem acesso a essa conta</div>
       </div>
     </div>
   );
