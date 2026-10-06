@@ -653,14 +653,25 @@ export function expandMonth(state: AppState, month: string, personId = 'all'): E
   return out;
 }
 
+// Quanto foi guardado (líquido) nas caixinhas no mês — dinheiro que saiu do
+// "livre pra gastar" mesmo sem ser um gasto categorizado. Movimentos sem
+// pessoa definida (criados antes dessa opção existir) só contam no total
+// da casa ('all'), não no saldo de ninguém em especial.
+export function caixinhaNetFor(state: AppState, month: string, personId = 'all') {
+  return state.caixinhaMovements
+    .filter(m => monthOf(m.date) === month && (personId === 'all' || m.personId === personId))
+    .reduce((s, m) => s + Number(m.amount || 0), 0);
+}
+
 export function totalsFor(state: AppState, month: string, personId = 'all') {
   const m = expandMonth(state, month, personId);
   const sum = (arr: { amount: number }[]) => arr.reduce((s, t) => s + Number(t.amount || 0), 0);
   const income = sum(m.entradas);
   const comum = sum(m.comuns), fixo = sum(m.fixos), parcela = sum(m.parcelas);
   const expenses = comum + fixo + parcela;
+  const caixinha = caixinhaNetFor(state, month, personId);
   return {
-    income, comum, fixo, parcela, expenses, balance: income - expenses,
+    income, comum, fixo, parcela, expenses, caixinha, balance: income - expenses - caixinha,
     counts: { comum: m.comuns.length, fixo: m.fixos.length, parcela: m.parcelas.length, entrada: m.entradas.length },
     items: m,
   };

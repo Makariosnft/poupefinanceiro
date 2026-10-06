@@ -2,7 +2,7 @@ import React from 'react';
 import * as S from '../lib/store';
 import { useStore } from '../lib/store';
 import {
-  Button, IconBtn, Field, Input, MoneyInput, Card, CardTitle, EmptyState, Row, KindSwitch,
+  Button, IconBtn, Field, Input, MoneyInput, Select, Card, CardTitle, EmptyState, Row, KindSwitch,
   TopBar, FAB, Modal, useIsMobile, tokens,
 } from '../components/ui';
 
@@ -33,8 +33,10 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
   const [amount, setAmount] = React.useState('');
   const [note, setNote] = React.useState('');
   const [date, setDate] = React.useState(() => S.todayISO());
+  const [movPersonId, setMovPersonId] = React.useState(() => state.people[0]?.id || '');
 
   const balanceOf = (id: string) => state.caixinhaMovements.filter(m => m.caixinhaId === id).reduce((s, m) => s + Number(m.amount), 0);
+  const personName = (id?: string) => state.people.find(p => p.id === id)?.name || '—';
 
   const openAdd = () => { setNewName(''); setAddOpen(true); };
   const doAdd = () => {
@@ -54,7 +56,7 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
   const addMov = () => {
     if (!active || !(Number(amount) > 0)) return;
     const signed = kind === 'aporte' ? Number(amount) : -Number(amount);
-    actions.addCaixinhaMovement({ caixinhaId: active.id, amount: signed, description: note.trim(), date });
+    actions.addCaixinhaMovement({ caixinhaId: active.id, amount: signed, description: note.trim(), date, personId: movPersonId || undefined });
     setAmount(''); setNote('');
   };
 
@@ -108,12 +110,13 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
             </Card>
 
             <Card>
-              <CardTitle sub="qualquer valor, a qualquer momento" right={<KindSwitch value={kind} onChange={v => setKind(v as 'aporte' | 'retirada')} size="md" options={[
+              <CardTitle sub={kind === 'aporte' ? 'desconta do saldo do mês de quem guardou' : 'volta pro saldo do mês de quem retirou'} right={<KindSwitch value={kind} onChange={v => setKind(v as 'aporte' | 'retirada')} size="md" options={[
                 { key: 'aporte', label: 'Aportar', icon: '↑' }, { key: 'retirada', label: 'Retirar', icon: '↓' },
               ]} />}>Movimentar</CardTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1.4fr 1fr auto', gap: 8, alignItems: 'end' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1.2fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
                 <Field label="valor"><MoneyInput value={amount} onChange={setAmount} onEnter={addMov} accent={kind === 'aporte' ? green : red} /></Field>
                 <Field label="descrição (opcional)"><Input value={note} onChange={setNote} placeholder="do que se trata…" onEnter={addMov} /></Field>
+                <Field label="quem"><Select value={movPersonId} onChange={setMovPersonId} options={state.people.map(p => ({ value: p.id, label: p.name }))} placeholder="—" /></Field>
                 <Field label="data"><Input type="date" value={date} onChange={setDate} /></Field>
                 <Button onClick={addMov} disabled={!(Number(amount) > 0)} tone={kind === 'aporte' ? green : red} style={{ height: 38 }}>
                   {kind === 'aporte' ? '+ aportar' : '− retirar'}
@@ -128,9 +131,10 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
                   <EmptyState icon="◯" title="Nada ainda esse mês" hint="Use o formulário acima para aportar ou retirar." />
                 ) : monthMovs.map((m, i) => (
                   <Row key={m.id} last={i === monthMovs.length - 1} onDelete={() => actions.delCaixinhaMovement(m.id)}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '10px 1fr 62px 96px', alignItems: 'center', gap: 9, padding: '8px 26px 8px 2px', fontSize: 12.5 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '10px 1fr 78px 62px 96px', alignItems: 'center', gap: 9, padding: '8px 26px 8px 2px', fontSize: 12.5 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 99, background: m.amount >= 0 ? green : red }} />
                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{m.description || (m.amount >= 0 ? 'Aporte' : 'Retirada')}</span>
+                      <span style={{ color: muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personName(m.personId)}</span>
                       <span style={{ color: muted, fontSize: 11 }}>{S.dayLabel(m.date)}</span>
                       <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', color: m.amount >= 0 ? green : red }}>
                         {m.amount >= 0 ? '+' : '−'} {S.fmt(Math.abs(m.amount))}
@@ -168,7 +172,7 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 8, padding: '7px 2px', fontSize: 12 }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {m.description || (m.amount >= 0 ? 'Aporte' : 'Retirada')}
-                          <span style={{ color: muted, fontSize: 10, marginLeft: 6 }}>{S.dayLabel(m.date)}</span>
+                          <span style={{ color: muted, fontSize: 10, marginLeft: 6 }}>{personName(m.personId)} · {S.dayLabel(m.date)}</span>
                         </span>
                         <span style={{ fontWeight: 700, whiteSpace: 'nowrap', color: m.amount >= 0 ? green : red }}>{m.amount >= 0 ? '+' : '−'} {S.fmt(Math.abs(m.amount))}</span>
                       </div>

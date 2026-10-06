@@ -88,6 +88,7 @@ export interface CaixinhaMovement {
   amount: number; // positivo = aporte, negativo = retirada
   description: string;
   date: string; // YYYY-MM-DD
+  personId?: string; // de quem saiu/voltou o dinheiro — afeta o saldo do mês dessa pessoa
 }
 
 export interface CardInvoicePayment {

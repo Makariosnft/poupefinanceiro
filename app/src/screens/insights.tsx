@@ -878,7 +878,7 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
           <Card pad={12} style={{ flexShrink: 0 }}>
             <CardTitle sub="resumo do mês">Números do mês</CardTitle>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 9 }}>
-              {([['entradas', t.income, green], ['gastos', t.expenses, red], ['saldo', t.balance, t.balance >= 0 ? green : red], ['comprometido', t.fixo + t.parcela, amber]] as [string, number, string][]).map(([l, v, c]) => (
+              {([['entradas', t.income, green], ['gastos', t.expenses, red], ['guardado na caixinha', t.caixinha, blue], ['saldo', t.balance, t.balance >= 0 ? green : red], ['comprometido', t.fixo + t.parcela, amber]] as [string, number, string][]).map(([l, v, c]) => (
                 <div key={l} style={{ padding: 9, border: `1.3px solid ${ink2}2a`, borderRadius: 8, background: '#f3eee2' }}>
                   <div style={{ fontSize: 9, color: muted, letterSpacing: '0.09em', textTransform: 'uppercase', fontWeight: 700 }}>{l}</div>
                   <div style={{ fontWeight: 800, fontSize: 17, letterSpacing: '-0.025em', color: c, marginTop: 3 }}>{S.fmt0(v)}</div>
