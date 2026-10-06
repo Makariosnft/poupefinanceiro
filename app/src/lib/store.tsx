@@ -218,7 +218,7 @@ function buildActions(
       if (error || !row) { console.error(error); toast(error?.message || 'Erro ao criar conta.', 'error'); return null; }
       setAccount({ id: row.account_id, name, inviteCode: row.invite_code, currency });
       setUi(u => ({ ...u, accountId: row.account_id }));
-      return row.account_id as string;
+      return { id: row.account_id as string, inviteCode: row.invite_code as string };
     },
     updateAccountCurrency: async (currency: string) => {
       const accountId = accountIdRef.current;

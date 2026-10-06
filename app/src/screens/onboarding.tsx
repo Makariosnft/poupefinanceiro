@@ -272,7 +272,7 @@ export function AccountChoice({ onCreate, onJoin }: { onCreate: () => void; onJo
 }
 
 export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void; onCreated: () => void }) {
-  const { state, actions, toast } = useStore();
+  const { actions, toast } = useStore();
   const [name, setName] = React.useState('');
   const [currency, setCurrency] = React.useState<string>(DEFAULT_CURRENCY);
   const [loading, setLoading] = React.useState(false);
@@ -282,9 +282,9 @@ export function CreateAccountScreen({ onBack, onCreated }: { onBack: () => void;
   const create = async () => {
     if (!name.trim()) return;
     setLoading(true);
-    const id = await actions.createAccount(name.trim(), currency);
+    const result = await actions.createAccount(name.trim(), currency);
     setLoading(false);
-    if (id) setCode(state.account?.inviteCode ?? null);
+    if (result) setCode(result.inviteCode);
   };
 
   const copyInvite = async () => {
