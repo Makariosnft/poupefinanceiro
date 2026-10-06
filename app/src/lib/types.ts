@@ -103,6 +103,13 @@ export interface BalanceAdjustment {
   note?: string;
 }
 
+export interface FixoAmountOverride {
+  id: string;
+  transactionId: string;
+  month: string; // YYYY-MM
+  amount: number;
+}
+
 export interface Account {
   id: string;
   name: string;
@@ -121,6 +128,7 @@ export interface AppState {
   caixinhaMovements: CaixinhaMovement[];
   cardInvoicePayments: CardInvoicePayment[];
   balanceAdjustments: BalanceAdjustment[];
+  fixoAmountOverrides: FixoAmountOverride[];
   account: Account | null;
   ui: UIState;
 }

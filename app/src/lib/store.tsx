@@ -1,10 +1,10 @@
 import React from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import type { Account, AppState, BalanceAdjustment, Caixinha, CaixinhaMovement, CardInvoicePayment, Category, Debt, Goal, PaymentType, Person, Toast, Transaction } from './types';
+import type { Account, AppState, BalanceAdjustment, Caixinha, CaixinhaMovement, CardInvoicePayment, Category, Debt, FixoAmountOverride, Goal, PaymentType, Person, Toast, Transaction } from './types';
 import {
-  BALANCE_ADJUSTMENTS_MAP, CAIXINHA_MAP, CAIXINHA_MOVEMENTS_MAP, CARD_INVOICE_PAYMENTS_MAP, CATEGORIES_MAP, DATA_TABLES, DEBTS_MAP, GOALS_MAP, PAYMENT_TYPES_MAP, PEOPLE_MAP, TX_MAP,
-  balanceAdjustmentsFromRow, caixinhaFromRow, caixinhaMovementsFromRow, cardInvoicePaymentsFromRow, categoriesFromRow, debtsFromRow, goalsFromRow, patchToRow, paymentTypesFromRow, peopleFromRow, txFromRow,
+  BALANCE_ADJUSTMENTS_MAP, CAIXINHA_MAP, CAIXINHA_MOVEMENTS_MAP, CARD_INVOICE_PAYMENTS_MAP, CATEGORIES_MAP, DATA_TABLES, DEBTS_MAP, FIXO_AMOUNT_OVERRIDES_MAP, GOALS_MAP, PAYMENT_TYPES_MAP, PEOPLE_MAP, TX_MAP,
+  balanceAdjustmentsFromRow, caixinhaFromRow, caixinhaMovementsFromRow, cardInvoicePaymentsFromRow, categoriesFromRow, debtsFromRow, fixoAmountOverridesFromRow, goalsFromRow, patchToRow, paymentTypesFromRow, peopleFromRow, txFromRow,
 } from './sync';
 
 const UI_LS_KEY = 'poupe.ui.v1';
@@ -148,6 +148,7 @@ function buildActions(
     setCaixinhaMovements: React.Dispatch<React.SetStateAction<CaixinhaMovement[]>>;
     setCardInvoicePayments: React.Dispatch<React.SetStateAction<CardInvoicePayment[]>>;
     setBalanceAdjustments: React.Dispatch<React.SetStateAction<BalanceAdjustment[]>>;
+    setFixoAmountOverrides: React.Dispatch<React.SetStateAction<FixoAmountOverride[]>>;
   },
   accountIdRef: React.MutableRefObject<string | null>,
   setUi: React.Dispatch<React.SetStateAction<AppState['ui']>>,
@@ -165,6 +166,7 @@ function buildActions(
   const caixinhaMovements = makeCrud<CaixinhaMovement>('caixinha_movements', lists.setCaixinhaMovements, CAIXINHA_MOVEMENTS_MAP, accountIdRef, toast, markSaved);
   const cardInvoicePayments = makeCrud<CardInvoicePayment>('card_invoice_payments', lists.setCardInvoicePayments, CARD_INVOICE_PAYMENTS_MAP, accountIdRef, toast, markSaved);
   const balanceAdjustments = makeCrud<BalanceAdjustment>('balance_adjustments', lists.setBalanceAdjustments, BALANCE_ADJUSTMENTS_MAP, accountIdRef, toast, markSaved);
+  const fixoAmountOverrides = makeCrud<FixoAmountOverride>('fixo_amount_overrides', lists.setFixoAmountOverrides, FIXO_AMOUNT_OVERRIDES_MAP, accountIdRef, toast, markSaved);
 
   return {
     setMonth: (m: string) => setUi(u => ({ ...u, month: m })),
@@ -386,6 +388,23 @@ function buildActions(
         return l;
       });
     },
+
+    setFixoAmountOverride: (transactionId: string, month: string, amount: number) => {
+      lists.setFixoAmountOverrides(l => {
+        const existing = l.find(x => x.transactionId === transactionId && x.month === month);
+        if (existing) fixoAmountOverrides.update(existing.id, { amount });
+        else fixoAmountOverrides.add({ transactionId, month, amount });
+        return l;
+      });
+      toast(`Valor de ${monthLabel(month).toLowerCase()} ajustado`);
+    },
+    clearFixoAmountOverride: (transactionId: string, month: string) => {
+      lists.setFixoAmountOverrides(l => {
+        const existing = l.find(x => x.transactionId === transactionId && x.month === month);
+        if (existing) { fixoAmountOverrides.remove(existing.id); toast('Voltou ao valor padrão', 'warn'); }
+        return l;
+      });
+    },
   };
 }
 
@@ -406,6 +425,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [caixinhaMovements, setCaixinhaMovements] = React.useState<CaixinhaMovement[]>([]);
   const [cardInvoicePayments, setCardInvoicePayments] = React.useState<CardInvoicePayment[]>([]);
   const [balanceAdjustments, setBalanceAdjustments] = React.useState<BalanceAdjustment[]>([]);
+  const [fixoAmountOverrides, setFixoAmountOverrides] = React.useState<FixoAmountOverride[]>([]);
   const [toasts, setToasts] = React.useState<Toast[]>([]);
   const [lastSaved, setLastSaved] = React.useState(0);
 
@@ -426,7 +446,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
 
   const actions = React.useMemo(
     () => buildActions(
-      { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals, setCaixinhas, setCaixinhaMovements, setCardInvoicePayments, setBalanceAdjustments },
+      { setPeople, setCategories, setPaymentTypes, setTransactions, setDebts, setGoals, setCaixinhas, setCaixinhaMovements, setCardInvoicePayments, setBalanceAdjustments, setFixoAmountOverrides },
       accountIdRef, setUi, setAccount, toast, markSaved,
     ),
     [toast, markSaved],
@@ -443,7 +463,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         setUi(u => ({ ...u, accountId: null, accountChecked: false }));
         setAccount(null);
         setPeople([]); setCategories([]); setPaymentTypes([]); setTransactions([]); setDebts([]); setGoals([]);
-        setCaixinhas([]); setCaixinhaMovements([]); setCardInvoicePayments([]); setBalanceAdjustments([]);
+        setCaixinhas([]); setCaixinhaMovements([]); setCardInvoicePayments([]); setBalanceAdjustments([]); setFixoAmountOverrides([]);
       }
     });
     return () => sub.subscription.unsubscribe();
@@ -472,7 +492,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       const { data: acc } = await supabase.from('accounts').select('id,name,invite_code,currency').eq('id', accountId).maybeSingle();
       if (!cancelled && acc) setAccount({ id: acc.id, name: acc.name, inviteCode: acc.invite_code, currency: acc.currency || DEFAULT_CURRENCY });
 
-      const [p, c, pt, tx, d, g, cx, cm, cip, ba] = await Promise.all([
+      const [p, c, pt, tx, d, g, cx, cm, cip, ba, fo] = await Promise.all([
         supabase.from('people').select('*').eq('account_id', accountId),
         supabase.from('categories').select('*').eq('account_id', accountId),
         supabase.from('payment_types').select('*').eq('account_id', accountId),
@@ -483,9 +503,10 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
         supabase.from('caixinha_movements').select('*').eq('account_id', accountId),
         supabase.from('card_invoice_payments').select('*').eq('account_id', accountId),
         supabase.from('balance_adjustments').select('*').eq('account_id', accountId),
+        supabase.from('fixo_amount_overrides').select('*').eq('account_id', accountId),
       ]);
       if (cancelled) return;
-      const loadError = [p, c, pt, tx, d, g, cx, cm, cip, ba].find(r => r.error)?.error;
+      const loadError = [p, c, pt, tx, d, g, cx, cm, cip, ba, fo].find(r => r.error)?.error;
       if (loadError) {
         console.error(loadError);
         toast('Erro ao carregar seus dados — isso não significa que foram perdidos. Recarregue a página; se persistir, avise.', 'error');
@@ -503,6 +524,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setCaixinhaMovements((cm.data || []).map(caixinhaMovementsFromRow));
       setCardInvoicePayments((cip.data || []).map(cardInvoicePaymentsFromRow));
       setBalanceAdjustments((ba.data || []).map(balanceAdjustmentsFromRow));
+      setFixoAmountOverrides((fo.data || []).map(fixoAmountOverridesFromRow));
     })();
 
     const applyChange = <T extends { id: string }>(
@@ -535,6 +557,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     wire('caixinha_movements', setCaixinhaMovements, caixinhaMovementsFromRow);
     wire('card_invoice_payments', setCardInvoicePayments, cardInvoicePaymentsFromRow);
     wire('balance_adjustments', setBalanceAdjustments, balanceAdjustmentsFromRow);
+    wire('fixo_amount_overrides', setFixoAmountOverrides, fixoAmountOverridesFromRow);
     channel.subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(channel); };
@@ -543,8 +566,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   setActiveCurrency(account?.currency);
 
   const state = React.useMemo<AppState>(
-    () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, cardInvoicePayments, balanceAdjustments, account, ui }),
-    [people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, cardInvoicePayments, balanceAdjustments, account, ui],
+    () => ({ people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, cardInvoicePayments, balanceAdjustments, fixoAmountOverrides, account, ui }),
+    [people, categories, paymentTypes, transactions, debts, goals, caixinhas, caixinhaMovements, cardInvoicePayments, balanceAdjustments, fixoAmountOverrides, account, ui],
   );
   const value = React.useMemo(() => ({ state, actions, toast, toasts, lastSaved }), [state, actions, toast, toasts, lastSaved]);
 
@@ -590,6 +613,14 @@ export function cardInvoiceInfo(t: Transaction, type: PaymentType | undefined) {
   return { auto, alt, effective: t.invoiceMonthOverride || auto, overridden: Boolean(t.invoiceMonthOverride) };
 }
 
+// Valor de um fixo nesse mês específico — se tiver ajuste manual, mais o
+// valor padrão da transação pra comparação (usado pelo botão de editar).
+export function fixoAmountFor(state: AppState, transactionId: string, month: string) {
+  const override = state.fixoAmountOverrides.find(o => o.transactionId === transactionId && o.month === month);
+  const base = state.transactions.find(t => t.id === transactionId)?.amount || 0;
+  return { amount: override ? override.amount : base, base, overridden: Boolean(override) };
+}
+
 export function expandMonth(state: AppState, month: string, personId = 'all'): ExpandedMonth {
   const inPerson = (t: Transaction) => personId === 'all' || t.personId === personId;
   const out: ExpandedMonth = { comuns: [], entradas: [], fixos: [], parcelas: [] };
@@ -599,8 +630,10 @@ export function expandMonth(state: AppState, month: string, personId = 'all'): E
     else if (t.kind === 'entrada' && monthOf(t.date) === month) out.entradas.push(t);
     else if (t.kind === 'fixo') {
       if (monthDiff(monthOf(t.date), month) >= 0) {
+        const override = state.fixoAmountOverrides.find(o => o.transactionId === t.id && o.month === month);
         out.fixos.push({
           ...t,
+          amount: override ? override.amount : t.amount,
           paid: (t.paidMonths || []).includes(month),
           dueDate: `${month}-${pad(Math.min(t.dayOfMonth || 1, 28))}`,
         });

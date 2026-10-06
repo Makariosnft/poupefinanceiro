@@ -583,11 +583,30 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
   const [filter, setFilter] = React.useState('todos');
   const [adding, setAdding] = React.useState(false);
   const f = useTxForm('fixo');
+  const [editAmountFor, setEditAmountFor] = React.useState<{ id: string; desc: string } | null>(null);
+  const [editAmount, setEditAmount] = React.useState('');
 
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
   const typeName = (id: string) => state.paymentTypes.find(x => x.id === id)?.name || '—';
   const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
+
+  const openEditAmount = (id: string, desc: string, currentAmount: number) => {
+    setEditAmountFor({ id, desc });
+    setEditAmount(String(currentAmount));
+  };
+  const saveEditAmount = () => {
+    const n = Number(editAmount.replace(',', '.'));
+    if (!editAmountFor || !n || n <= 0) return;
+    actions.setFixoAmountOverride(editAmountFor.id, month, n);
+    setEditAmountFor(null);
+  };
+  const resetEditAmount = () => {
+    if (!editAmountFor) return;
+    actions.clearFixoAmountOverride(editAmountFor.id, month);
+    setEditAmountFor(null);
+  };
+  const editingInfo = editAmountFor ? S.fixoAmountFor(state, editAmountFor.id, month) : null;
 
   const all = t.items.fixos;
   const rows = filter === 'todos' ? all : filter === 'pagos' ? all.filter(r => r.paid) : all.filter(r => !r.paid);
@@ -652,7 +671,10 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
                     <span style={{ width: 8, height: 8, borderRadius: 99, background: catColor(r.categoryId), flexShrink: 0 }} />
                     <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 11.5 }}>{catName(r.categoryId)}</span>
                   </span>
-                  <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>{S.fmt(r.amount)}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                    <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', color: S.fixoAmountFor(state, r.id, month).overridden ? amber : ink }}>{S.fmt(r.amount)}</span>
+                    <IconBtn onClick={() => openEditAmount(r.id, r.desc, r.amount)} title="Editar valor desse mês" size={20}>✎</IconBtn>
+                  </span>
                   <IconBtn onClick={() => actions.delTx(r.id)} title="Excluir fixo" tone={red} size={22}>×</IconBtn>
                 </div>
               ))}
@@ -676,6 +698,20 @@ export function Fixos({ onNavigate, onOpenModal }: ScreenProps) {
           <PersonSpendCard rows={people} />
         </div>
       </div>
+
+      <Modal open={!!editAmountFor} onClose={() => setEditAmountFor(null)} title={`Valor de ${editAmountFor?.desc || ''} em ${S.monthLabel(month).toLowerCase()}`} width={380}>
+        <div style={{ fontSize: 12, color: muted, marginBottom: 14 }}>
+          Esse valor vale só pra {S.monthLabel(month).toLowerCase()} — os outros meses continuam com o valor padrão{editingInfo ? ` (${S.fmt(editingInfo.base)})` : ''}.
+        </div>
+        <Field label="valor desse mês">
+          <MoneyInput value={editAmount} onChange={setEditAmount} onEnter={saveEditAmount} />
+        </Field>
+        <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+          {editingInfo?.overridden && <Button variant="ghost" onClick={resetEditAmount}>Voltar ao padrão</Button>}
+          <Button onClick={saveEditAmount} disabled={!editAmount || !Number(editAmount.replace(',', '.'))}>Salvar</Button>
+        </div>
+      </Modal>
+
       <FAB onClick={onOpenModal} />
     </div>
   );
