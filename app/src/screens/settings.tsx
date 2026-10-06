@@ -15,7 +15,7 @@ const SUBTABS = [
   { key: 'pessoas', label: 'Pessoas' },
   { key: 'categorias', label: 'Categorias' },
   { key: 'pagamentos', label: 'Pagamentos' },
-  { key: 'conta', label: 'Convite' },
+  { key: 'conta', label: 'Conta' },
   { key: 'membros', label: 'Membros' },
 ] as const;
 type SubTab = typeof SUBTABS[number]['key'];
