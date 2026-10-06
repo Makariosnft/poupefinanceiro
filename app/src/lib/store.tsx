@@ -412,7 +412,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
   const uiPrefs = React.useMemo(loadUiPrefs, []);
   const [ui, setUi] = React.useState<AppState['ui']>({
     month: uiPrefs.month, personId: uiPrefs.personId, activeGoalId: null,
-    authed: false, authLoading: true, accountId: null, accountChecked: false, passwordRecovery: false,
+    authed: false, authLoading: true, accountId: null, accountChecked: false, dataLoaded: false, passwordRecovery: false,
   });
   const [account, setAccount] = React.useState<Account | null>(null);
   const [people, setPeople] = React.useState<Person[]>([]);
@@ -460,7 +460,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       setUi(u => ({ ...u, authed: !!session, authLoading: false, passwordRecovery: event === 'PASSWORD_RECOVERY' ? true : u.passwordRecovery }));
       if (!session) {
-        setUi(u => ({ ...u, accountId: null, accountChecked: false }));
+        setUi(u => ({ ...u, accountId: null, accountChecked: false, dataLoaded: false }));
         setAccount(null);
         setPeople([]); setCategories([]); setPaymentTypes([]); setTransactions([]); setDebts([]); setGoals([]);
         setCaixinhas([]); setCaixinhaMovements([]); setCardInvoicePayments([]); setBalanceAdjustments([]); setFixoAmountOverrides([]);
@@ -510,6 +510,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       if (loadError) {
         console.error(loadError);
         toast('Erro ao carregar seus dados — isso não significa que foram perdidos. Recarregue a página; se persistir, avise.', 'error');
+        setUi(u => ({ ...u, dataLoaded: true }));
         return;
       }
       const peopleList = (p.data || []).map(peopleFromRow);
@@ -525,6 +526,7 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
       setCardInvoicePayments((cip.data || []).map(cardInvoicePaymentsFromRow));
       setBalanceAdjustments((ba.data || []).map(balanceAdjustmentsFromRow));
       setFixoAmountOverrides((fo.data || []).map(fixoAmountOverridesFromRow));
+      setUi(u => ({ ...u, dataLoaded: true }));
     })();
 
     const applyChange = <T extends { id: string }>(

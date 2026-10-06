@@ -40,14 +40,20 @@ function AppShell() {
   const initialized = React.useRef(false);
 
   // Decide the starting screen once, right after we know whether this user
-  // already belongs to an account (returning user -> app; brand new -> choice).
+  // already belongs to an account and (if so) whether that account's data has
+  // finished loading — a returning user with people already set up goes
+  // straight to the app; someone who has an account but never finished the
+  // wizard (e.g. reloaded mid-setup) lands back on it instead of an empty app.
   // Later transitions are all explicit (see the screens below), so creating
   // an account mid-flow doesn't jump straight past the invite-code/wizard steps.
   React.useEffect(() => {
     if (initialized.current || state.ui.authLoading || !state.ui.authed || !state.ui.accountChecked) return;
+    if (state.ui.accountId && !state.ui.dataLoaded) return;
     initialized.current = true;
-    setScreen(state.ui.accountId ? 'app' : 'choice');
-  }, [state.ui.authLoading, state.ui.authed, state.ui.accountChecked, state.ui.accountId]);
+    if (!state.ui.accountId) { setScreen('choice'); return; }
+    if (state.people.length === 0) { setOnbStep(0); setScreen('wizard'); return; }
+    setScreen('app');
+  }, [state.ui.authLoading, state.ui.authed, state.ui.accountChecked, state.ui.accountId, state.ui.dataLoaded, state.people.length]);
 
   React.useEffect(() => {
     if (!state.ui.authed) { initialized.current = false; setScreen(null); }

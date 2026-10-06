@@ -73,6 +73,7 @@ export interface UIState {
   authLoading: boolean;
   accountId: string | null;
   accountChecked: boolean; // true once we've determined accountId (found or not) for the current session
+  dataLoaded: boolean; // true once people/categories/etc. finished loading for the current accountId
   passwordRecovery: boolean; // true right after the user opens a "redefinir senha" e-mail link
 }
 
