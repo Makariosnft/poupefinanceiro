@@ -659,7 +659,7 @@ export function expandMonth(state: AppState, month: string, personId = 'all'): E
 // da casa ('all'), não no saldo de ninguém em especial.
 export function caixinhaNetFor(state: AppState, month: string, personId = 'all') {
   return state.caixinhaMovements
-    .filter(m => monthOf(m.date) === month && (personId === 'all' || m.personId === personId))
+    .filter(m => !m.excludeFromBalance && monthOf(m.date) === month && (personId === 'all' || m.personId === personId))
     .reduce((s, m) => s + Number(m.amount || 0), 0);
 }
 

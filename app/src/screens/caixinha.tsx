@@ -34,6 +34,7 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
   const [note, setNote] = React.useState('');
   const [date, setDate] = React.useState(() => S.todayISO());
   const [movPersonId, setMovPersonId] = React.useState(() => state.people[0]?.id || '');
+  const [excludeFromBalance, setExcludeFromBalance] = React.useState(false);
 
   const balanceOf = (id: string) => state.caixinhaMovements.filter(m => m.caixinhaId === id).reduce((s, m) => s + Number(m.amount), 0);
   const personName = (id?: string) => state.people.find(p => p.id === id)?.name || '—';
@@ -56,8 +57,8 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
   const addMov = () => {
     if (!active || !(Number(amount) > 0)) return;
     const signed = kind === 'aporte' ? Number(amount) : -Number(amount);
-    actions.addCaixinhaMovement({ caixinhaId: active.id, amount: signed, description: note.trim(), date, personId: movPersonId || undefined });
-    setAmount(''); setNote('');
+    actions.addCaixinhaMovement({ caixinhaId: active.id, amount: signed, description: note.trim(), date, personId: movPersonId || undefined, excludeFromBalance });
+    setAmount(''); setNote(''); setExcludeFromBalance(false);
   };
 
   return (
@@ -122,6 +123,10 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
                   {kind === 'aporte' ? '+ aportar' : '− retirar'}
                 </Button>
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 10, fontSize: 11.5, color: muted, cursor: 'pointer' }}>
+                <input type="checkbox" checked={excludeFromBalance} onChange={e => setExcludeFromBalance(e.target.checked)} style={{ cursor: 'pointer' }} />
+                já existia antes de usar o app (não afeta o saldo do mês)
+              </label>
             </Card>
 
             <Card style={{ flex: 1, minHeight: 170, display: 'flex', flexDirection: 'column' }}>
@@ -133,7 +138,10 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
                   <Row key={m.id} last={i === monthMovs.length - 1} onDelete={() => actions.delCaixinhaMovement(m.id)}>
                     <div style={{ display: 'grid', gridTemplateColumns: '10px 1fr 78px 62px 96px', alignItems: 'center', gap: 9, padding: '8px 26px 8px 2px', fontSize: 12.5 }}>
                       <span style={{ width: 8, height: 8, borderRadius: 99, background: m.amount >= 0 ? green : red }} />
-                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{m.description || (m.amount >= 0 ? 'Aporte' : 'Retirada')}</span>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                        {m.description || (m.amount >= 0 ? 'Aporte' : 'Retirada')}
+                        {m.excludeFromBalance && <span title="Não afeta o saldo do mês" style={{ marginLeft: 5, fontSize: 10, color: muted }}>🔒</span>}
+                      </span>
                       <span style={{ color: muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personName(m.personId)}</span>
                       <span style={{ color: muted, fontSize: 11 }}>{S.dayLabel(m.date)}</span>
                       <span style={{ textAlign: 'right', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', color: m.amount >= 0 ? green : red }}>
@@ -172,6 +180,7 @@ export function CaixinhaScreen({ onNavigate, onOpenModal }: ScreenProps) {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', alignItems: 'center', gap: 8, padding: '7px 2px', fontSize: 12 }}>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           {m.description || (m.amount >= 0 ? 'Aporte' : 'Retirada')}
+                          {m.excludeFromBalance && <span title="Não afeta o saldo do mês" style={{ marginLeft: 5, fontSize: 10, color: muted }}>🔒</span>}
                           <span style={{ color: muted, fontSize: 10, marginLeft: 6 }}>{personName(m.personId)} · {S.dayLabel(m.date)}</span>
                         </span>
                         <span style={{ fontWeight: 700, whiteSpace: 'nowrap', color: m.amount >= 0 ? green : red }}>{m.amount >= 0 ? '+' : '−'} {S.fmt(Math.abs(m.amount))}</span>
