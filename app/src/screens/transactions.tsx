@@ -251,7 +251,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const typeName = (id: string) => state.paymentTypes.find(x => x.id === id)?.name || '—';
   const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
 
-  const recent = t.items.comuns.slice(0, 8);
+  const recent = t.items.comuns.slice(0, 4);
   // Inclui o que foi guardado na caixinha no "usado" — dinheiro aportado lá
   // também deixou de estar livre pra gastar, mesmo não sendo um gasto.
   const usedAmount = t.income - t.balance;
