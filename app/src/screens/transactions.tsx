@@ -285,7 +285,8 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
 
           <Card style={{ maxHeight: 300, display: 'flex', flexDirection: 'column' }}>
-            <CardTitle sub={catsOver > 0 ? `${catsOver} categoria${catsOver > 1 ? 's' : ''} acima do limite` : 'tudo dentro do combinado'}>Limites por categoria</CardTitle>
+            <CardTitle sub={catsOver > 0 ? `${catsOver} categoria${catsOver > 1 ? 's' : ''} acima do limite` : 'tudo dentro do combinado'}
+              right={<Button variant="ghost" size="sm" onClick={() => onNavigate('Resumo')}>editar limites</Button>}>Limites por categoria</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {catRowsSorted.length === 0 ? (
                 <EmptyState icon="🎯" title="Nenhum limite definido ainda" hint="Defina um limite de gasto por categoria na aba Resumo." />
