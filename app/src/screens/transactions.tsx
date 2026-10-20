@@ -296,10 +296,11 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
             <CardTitle sub="salário, extra, freela…" right={
               <KindSwitch value={incKind} onChange={setIncKind} options={[{ key: 'Salário', label: 'Salário' }, { key: 'Extra', label: 'Extra' }]} />
             }>Lançar entrada</CardTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2.4fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
               <Field label="descrição"><Input value={inc.desc} onChange={inc.setDesc} placeholder="de onde veio?" onEnter={saveEntrada} accent={green} /></Field>
               <Field label="valor"><MoneyInput value={inc.amount} onChange={inc.setAmount} onEnter={saveEntrada} accent={green} /></Field>
               <Field label="quem"><Select value={inc.personId} onChange={inc.setPersonId} options={personOptions(state)} placeholder="—" accent={green} /></Field>
+              <Field label="data"><Input type="date" value={inc.date} onChange={inc.setDate} accent={green} /></Field>
               <Button onClick={saveEntrada} disabled={!incValid} tone={green} style={{ height: 38 }}>+ entrada</Button>
             </div>
           </Card>
