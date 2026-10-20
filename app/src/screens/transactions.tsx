@@ -245,6 +245,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const invoices = S.cardInvoices(state, month);
 
   const [popupTab, setPopupTab] = React.useState<'gasto' | 'entrada' | null>(null);
+  const [editingLimits, setEditingLimits] = React.useState(false);
 
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
@@ -269,6 +270,11 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
     ...catRows.filter(r => r.cat.expectedAmount == null).sort((a, b) => b.value - a.value),
   ];
   const catsOver = catRowsSorted.filter(r => r.cat.expectedAmount != null && r.value > r.cat.expectedAmount!).length;
+  // No modo de edição mostra todas as categorias (mesmo zeradas/sem limite),
+  // já que aqui dá pra definir um limite novo pra qualquer uma.
+  const catRowsAll = [...state.categories]
+    .map(c => ({ cat: c, value: catSpend.get(c.id) || 0 }))
+    .sort((a, b) => a.cat.name.localeCompare(b.cat.name, 'pt-BR'));
 
   return (
     <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
@@ -285,11 +291,24 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
 
           <Card style={{ maxHeight: 300, display: 'flex', flexDirection: 'column' }}>
-            <CardTitle sub={catsOver > 0 ? `${catsOver} categoria${catsOver > 1 ? 's' : ''} acima do limite` : 'tudo dentro do combinado'}
-              right={<Button variant="ghost" size="sm" onClick={() => onNavigate('Resumo')}>editar limites</Button>}>Limites por categoria</CardTitle>
+            <CardTitle sub={editingLimits ? 'defina o limite de cada categoria' : catsOver > 0 ? `${catsOver} categoria${catsOver > 1 ? 's' : ''} acima do limite` : 'tudo dentro do combinado'}
+              right={<Button variant="ghost" size="sm" onClick={() => setEditingLimits(e => !e)}>{editingLimits ? 'concluído' : 'Editar limites'}</Button>}>Limites por categoria</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
-              {catRowsSorted.length === 0 ? (
-                <EmptyState icon="🎯" title="Nenhum limite definido ainda" hint="Defina um limite de gasto por categoria na aba Resumo." />
+              {editingLimits ? catRowsAll.map(r => (
+                <div key={r.cat.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '7px 0', borderBottom: `1px dashed ${ink2}30`, fontSize: 12.5 }}>
+                  <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 99, background: r.cat.color, display: 'inline-block', marginRight: 7 }} />{r.cat.name}
+                    <span style={{ color: muted, marginLeft: 7, fontSize: 11 }}>({S.fmt0(r.value)})</span>
+                  </span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+                    <span style={{ fontSize: 9, color: muted }}>limite</span>
+                    <input type="number" min={0} step="0.01" value={r.cat.expectedAmount ?? ''} placeholder="—"
+                      onChange={e => actions.updateCategory(r.cat.id, { expectedAmount: e.target.value ? Number(e.target.value) : undefined })}
+                      style={{ width: 72, padding: '3px 6px', borderRadius: 5, border: `1px solid ${ink2}55`, background: paper, fontSize: 11, fontWeight: 700, color: ink }} />
+                  </span>
+                </div>
+              )) : catRowsSorted.length === 0 ? (
+                <EmptyState icon="🎯" title="Nenhum limite definido ainda" hint="Clique em “Editar limites” pra definir um." />
               ) : catRowsSorted.map(r => {
                 const limit = r.cat.expectedAmount;
                 const has = limit != null;
