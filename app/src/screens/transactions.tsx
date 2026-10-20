@@ -248,6 +248,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const inc = useTxForm('comum');
   const [incKind, setIncKind] = React.useState('Salário');
   const invoiceGate = useInvoiceMonthGate();
+  const [addMode, setAddMode] = React.useState<'gasto' | 'entrada' | null>(null);
 
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
@@ -278,32 +279,48 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 2 }}>
           <Card>
-            <CardTitle sub="preencha e tecle Enter — entra na hora" right={<KindSwitch value={g.kind} onChange={v => g.setKind(v as TxKind)} />}>Lançar gasto</CardTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.8fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
-              <Field label="descrição"><Input value={g.desc} onChange={g.setDesc} placeholder="o que foi?" onEnter={saveGasto} /></Field>
-              <Field label="valor"><MoneyInput value={g.amount} onChange={g.setAmount} onEnter={saveGasto} accent={ink} /></Field>
-              <Field label="categoria"><Select value={g.categoryId} onChange={g.setCategoryId} options={catOptions(state)} placeholder="—" /></Field>
-              <Field label="pagamento"><Select value={g.typeId} onChange={g.setTypeId} options={typeOptions(state)} placeholder="—" /></Field>
-              <Field label="quem"><Select value={g.personId} onChange={g.setPersonId} options={personOptions(state)} placeholder="—" /></Field>
-              <Button onClick={saveGasto} disabled={!g.valid} style={{ height: 38 }}>add</Button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 10 }}>
-              <KindExtraFields f={g} />
+            <CardTitle sub="o que você quer lançar?">Novo lançamento</CardTitle>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Chip active={addMode === 'gasto'} onClick={() => setAddMode(m => m === 'gasto' ? null : 'gasto')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↓ Gasto</Chip>
+              <Chip active={addMode === 'entrada'} color={green} onClick={() => setAddMode(m => m === 'entrada' ? null : 'entrada')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↑ Entrada</Chip>
             </div>
           </Card>
 
-          <Card>
-            <CardTitle sub="salário, extra, freela…" right={
-              <KindSwitch value={incKind} onChange={setIncKind} options={[{ key: 'Salário', label: 'Salário' }, { key: 'Extra', label: 'Extra' }]} />
-            }>Lançar entrada</CardTitle>
-            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-              <Field label="descrição"><Input value={inc.desc} onChange={inc.setDesc} placeholder="de onde veio?" onEnter={saveEntrada} accent={green} /></Field>
-              <Field label="valor"><MoneyInput value={inc.amount} onChange={inc.setAmount} onEnter={saveEntrada} accent={green} /></Field>
-              <Field label="quem"><Select value={inc.personId} onChange={inc.setPersonId} options={personOptions(state)} placeholder="—" accent={green} /></Field>
-              <Field label="data"><Input type="date" value={inc.date} onChange={inc.setDate} accent={green} /></Field>
-              <Button onClick={saveEntrada} disabled={!incValid} tone={green} style={{ height: 38 }}>+ entrada</Button>
-            </div>
-          </Card>
+          {addMode === 'gasto' && (
+            <Card>
+              <CardTitle sub="preencha e tecle Enter — entra na hora" right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <KindSwitch value={g.kind} onChange={v => g.setKind(v as TxKind)} />
+                <IconBtn onClick={() => setAddMode(null)} title="Fechar">×</IconBtn>
+              </div>}>Lançar gasto</CardTitle>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.8fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
+                <Field label="descrição"><Input value={g.desc} onChange={g.setDesc} placeholder="o que foi?" onEnter={saveGasto} /></Field>
+                <Field label="valor"><MoneyInput value={g.amount} onChange={g.setAmount} onEnter={saveGasto} accent={ink} /></Field>
+                <Field label="categoria"><Select value={g.categoryId} onChange={g.setCategoryId} options={catOptions(state)} placeholder="—" /></Field>
+                <Field label="pagamento"><Select value={g.typeId} onChange={g.setTypeId} options={typeOptions(state)} placeholder="—" /></Field>
+                <Field label="quem"><Select value={g.personId} onChange={g.setPersonId} options={personOptions(state)} placeholder="—" /></Field>
+                <Button onClick={saveGasto} disabled={!g.valid} style={{ height: 38 }}>add</Button>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 10 }}>
+                <KindExtraFields f={g} />
+              </div>
+            </Card>
+          )}
+
+          {addMode === 'entrada' && (
+            <Card>
+              <CardTitle sub="salário, extra, freela…" right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <KindSwitch value={incKind} onChange={setIncKind} options={[{ key: 'Salário', label: 'Salário' }, { key: 'Extra', label: 'Extra' }]} />
+                <IconBtn onClick={() => setAddMode(null)} title="Fechar">×</IconBtn>
+              </div>}>Lançar entrada</CardTitle>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
+                <Field label="descrição"><Input value={inc.desc} onChange={inc.setDesc} placeholder="de onde veio?" onEnter={saveEntrada} accent={green} /></Field>
+                <Field label="valor"><MoneyInput value={inc.amount} onChange={inc.setAmount} onEnter={saveEntrada} accent={green} /></Field>
+                <Field label="quem"><Select value={inc.personId} onChange={inc.setPersonId} options={personOptions(state)} placeholder="—" accent={green} /></Field>
+                <Field label="data"><Input type="date" value={inc.date} onChange={inc.setDate} accent={green} /></Field>
+                <Button onClick={saveEntrada} disabled={!incValid} tone={green} style={{ height: 38 }}>+ entrada</Button>
+              </div>
+            </Card>
+          )}
 
           <Card style={{ maxHeight: 380, display: 'flex', flexDirection: 'column' }}>
             <CardTitle sub={`${t.counts.comum} lançamentos avulsos em ${S.monthLabel(month).toLowerCase()}`}
