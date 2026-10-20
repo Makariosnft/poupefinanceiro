@@ -143,8 +143,8 @@ function InvoiceMonthPrompt({ gate }: { gate: ReturnType<typeof useInvoiceMonthG
     <Modal open={!!p} onClose={gate.cancel} title="Fatura deste lançamento" width={420}
       footer={<>
         <Button variant="ghost" onClick={gate.cancel}>cancelar</Button>
-        <Button variant="outline" onClick={() => gate.answer(false)}>não, foi pra outra</Button>
-        <Button onClick={() => gate.answer(true)}>sim, entra nela</Button>
+        <Button variant="outline" onClick={() => gate.answer(false)}>não, próxima fatura</Button>
+        <Button onClick={() => gate.answer(true)}>sim, fatura atual</Button>
       </>}>
       {p && (
         <div style={{ fontSize: 13, color: ink2, lineHeight: 1.5 }}>
@@ -274,9 +274,9 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   return (
     <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Lançamentos" onNavigate={onNavigate} />
-      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.45fr 1fr', gap: 16, padding: 16 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.45fr 1fr', gap: 16, padding: 16, overflow: isMobile ? 'visible' : 'auto' }}>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: 'auto', paddingRight: 2 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 2 }}>
           <Card>
             <CardTitle sub="preencha e tecle Enter — entra na hora" right={<KindSwitch value={g.kind} onChange={v => g.setKind(v as TxKind)} />}>Lançar gasto</CardTitle>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.8fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
@@ -305,7 +305,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
             </div>
           </Card>
 
-          <Card style={{ flex: 1, minHeight: 200, display: 'flex', flexDirection: 'column' }}>
+          <Card style={{ maxHeight: 380, display: 'flex', flexDirection: 'column' }}>
             <CardTitle sub={`${t.counts.comum} lançamentos avulsos em ${S.monthLabel(month).toLowerCase()}`}
               right={<Button variant="ghost" size="sm" onClick={() => onNavigate('Gastos do mês')}>ver tudo →</Button>}>Gastos comuns</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
@@ -328,7 +328,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, minHeight: 0, overflow: isMobile ? 'visible' : 'auto', paddingBottom: 56 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 56 }}>
           <Card style={{ background: paper2 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
               <div style={{ minWidth: 0 }}>
@@ -351,7 +351,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
             </div>
           </Card>
 
-          <Card style={{ flex: 1, minHeight: 190, display: 'flex', flexDirection: 'column' }}>
+          <Card style={{ maxHeight: 260, display: 'flex', flexDirection: 'column' }}>
             <CardTitle sub={`${ups.filter(u => u.urg !== 'ok').length} exigem atenção`}>Próximos vencimentos</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {ups.length === 0 ? <EmptyState icon="✓" title="Nada a vencer" hint="Todos os fixos do mês já estão pagos." /> :
