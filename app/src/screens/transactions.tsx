@@ -101,11 +101,67 @@ function KindExtraFields({ f }: { f: TxForm }) {
   );
 }
 
+// ── Confirmação de fatura perto do fechamento do cartão ────────────
+// A data exata do fechamento varia um pouco na prática (fim de semana,
+// feriado), então pra lançamentos no cartão a até 1 dia do fechamento
+// cadastrado, perguntamos em vez de assumir o cálculo automático.
+interface InvoiceGatePending {
+  payload: Omit<Transaction, 'id'>;
+  thisMonth: string;
+  altMonth: string;
+  closingDay: number;
+  cardName: string;
+  proceed: (p: Omit<Transaction, 'id'>) => void;
+}
+
+function useInvoiceMonthGate() {
+  const [pending, setPending] = React.useState<InvoiceGatePending | null>(null);
+
+  const gate = (state: AppState, payload: Omit<Transaction, 'id'>, proceed: (p: Omit<Transaction, 'id'>) => void) => {
+    const type = state.paymentTypes.find(p => p.id === payload.typeId);
+    if (payload.kind !== 'comum' || type?.kind !== 'card' || !type.closing) { proceed(payload); return; }
+    const day = Number(payload.date.slice(8, 10));
+    if (Math.abs(day - type.closing) > 1) { proceed(payload); return; }
+    const thisMonth = S.monthOf(payload.date);
+    const altMonth = day > type.closing ? S.addMonths(thisMonth, -1) : S.addMonths(thisMonth, 1);
+    setPending({ payload, thisMonth, altMonth, closingDay: type.closing, cardName: type.name, proceed });
+  };
+
+  const answer = (goesThisMonth: boolean) => {
+    if (!pending) return;
+    pending.proceed({ ...pending.payload, invoiceMonthOverride: goesThisMonth ? pending.thisMonth : pending.altMonth });
+    setPending(null);
+  };
+  const cancel = () => setPending(null);
+
+  return { pending, gate, answer, cancel };
+}
+
+function InvoiceMonthPrompt({ gate }: { gate: ReturnType<typeof useInvoiceMonthGate> }) {
+  const p = gate.pending;
+  return (
+    <Modal open={!!p} onClose={gate.cancel} title="Fatura deste lançamento" width={420}
+      footer={<>
+        <Button variant="ghost" onClick={gate.cancel}>cancelar</Button>
+        <Button variant="outline" onClick={() => gate.answer(false)}>não, foi pra outra</Button>
+        <Button onClick={() => gate.answer(true)}>sim, entra nela</Button>
+      </>}>
+      {p && (
+        <div style={{ fontSize: 13, color: ink2, lineHeight: 1.5 }}>
+          Esse lançamento é perto do fechamento do cartão <b>{p.cardName}</b> (dia {p.closingDay}) — às vezes a fatura real fecha um dia antes ou depois do combinado.
+          <div style={{ marginTop: 10, fontWeight: 600, color: ink }}>Este lançamento entrará na fatura de {S.monthLabel(p.thisMonth).toLowerCase()}?</div>
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 // ── Modal de lançamento (FAB) ──────────────────────────────────────
 export function QuickAddModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { state, actions } = useStore();
   const f = useTxForm('comum');
   const [tab, setTab] = React.useState<'gasto' | 'entrada'>('gasto');
+  const invoiceGate = useInvoiceMonthGate();
 
   const valid = tab === 'entrada'
     ? Boolean(f.desc.trim() && Number(f.amount) > 0 && f.personId)
@@ -113,14 +169,18 @@ export function QuickAddModal({ open, onClose }: { open: boolean; onClose: () =>
 
   const save = () => {
     if (!valid) return;
-    if (tab === 'entrada') actions.addTx({ kind: 'entrada', desc: f.desc.trim(), amount: Number(f.amount), categoryId: incomeCategoryId(state), typeId: f.typeId || state.paymentTypes[0]?.id || '', personId: f.personId, date: f.date, incomeKind: 'Salário' });
-    else actions.addTx(f.build(state.ui.month));
-    f.reset(); onClose();
+    if (tab === 'entrada') {
+      actions.addTx({ kind: 'entrada', desc: f.desc.trim(), amount: Number(f.amount), categoryId: incomeCategoryId(state), typeId: f.typeId || state.paymentTypes[0]?.id || '', personId: f.personId, date: f.date, incomeKind: 'Salário' });
+      f.reset(); onClose();
+      return;
+    }
+    invoiceGate.gate(state, f.build(state.ui.month), payload => { actions.addTx(payload); f.reset(); onClose(); });
   };
 
   React.useEffect(() => { if (open) f.reset(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
 
   return (
+    <>
     <Modal open={open} onClose={onClose} title={tab === 'entrada' ? 'Nova entrada' : 'Novo lançamento'} width={480}
       footer={<>
         <span style={{ fontSize: 11, color: muted, marginRight: 'auto' }}>Esc para fechar</span>
@@ -164,6 +224,8 @@ export function QuickAddModal({ open, onClose }: { open: boolean; onClose: () =>
         </Field>
       </div>
     </Modal>
+    <InvoiceMonthPrompt gate={invoiceGate} />
+    </>
   );
 }
 
@@ -185,13 +247,17 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const g = useTxForm('comum');
   const inc = useTxForm('comum');
   const [incKind, setIncKind] = React.useState('Salário');
+  const invoiceGate = useInvoiceMonthGate();
 
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
   const typeName = (id: string) => state.paymentTypes.find(x => x.id === id)?.name || '—';
   const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
 
-  const saveGasto = () => { if (!g.valid) return; actions.addTx(g.build(month)); g.reset(); };
+  const saveGasto = () => {
+    if (!g.valid) return;
+    invoiceGate.gate(state, g.build(month), payload => { actions.addTx(payload); g.reset(); });
+  };
   const incValid = Boolean(inc.desc.trim() && Number(inc.amount) > 0 && inc.personId);
   const saveEntrada = () => {
     if (!incValid) return;
@@ -336,6 +402,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
         </div>
       </div>
       <FAB onClick={onOpenModal} />
+      <InvoiceMonthPrompt gate={invoiceGate} />
     </div>
   );
 }
