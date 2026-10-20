@@ -373,7 +373,7 @@ export function Modal({ open, onClose, title, children, footer, width = 460 }: M
           <IconBtn onClick={onClose} title="Fechar (Esc)">✕</IconBtn>
         </div>
         <div style={{ marginTop: 14 }}>{children}</div>
-        {footer && <div style={{ marginTop: 18, display: 'flex', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>{footer}</div>}
+        {footer && <div style={{ marginTop: 18, display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, alignItems: 'center' }}>{footer}</div>}
       </div>
     </div>
   );

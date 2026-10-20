@@ -140,7 +140,7 @@ function useInvoiceMonthGate() {
 function InvoiceMonthPrompt({ gate }: { gate: ReturnType<typeof useInvoiceMonthGate> }) {
   const p = gate.pending;
   return (
-    <Modal open={!!p} onClose={gate.cancel} title="Fatura deste lançamento" width={420}
+    <Modal open={!!p} onClose={gate.cancel} title="Fatura deste lançamento" width={480}
       footer={<>
         <Button variant="ghost" onClick={gate.cancel}>cancelar</Button>
         <Button variant="outline" onClick={() => gate.answer(false)}>não, próxima fatura</Button>
