@@ -157,7 +157,7 @@ function InvoiceMonthPrompt({ gate }: { gate: ReturnType<typeof useInvoiceMonthG
 }
 
 // ── Modal de lançamento (FAB) ──────────────────────────────────────
-export function QuickAddModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function QuickAddModal({ open, onClose, initialTab }: { open: boolean; onClose: () => void; initialTab?: 'gasto' | 'entrada' }) {
   const { state, actions } = useStore();
   const f = useTxForm('comum');
   const [tab, setTab] = React.useState<'gasto' | 'entrada'>('gasto');
@@ -177,7 +177,7 @@ export function QuickAddModal({ open, onClose }: { open: boolean; onClose: () =>
     invoiceGate.gate(state, f.build(state.ui.month), payload => { actions.addTx(payload); f.reset(); onClose(); });
   };
 
-  React.useEffect(() => { if (open) f.reset(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
+  React.useEffect(() => { if (open) { f.reset(); setTab(initialTab || 'gasto'); } /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [open]);
 
   return (
     <>
@@ -244,27 +244,12 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const ups = S.upcoming(state, month, personId).slice(0, 7);
   const invoices = S.cardInvoices(state, month);
 
-  const g = useTxForm('comum');
-  const inc = useTxForm('comum');
-  const [incKind, setIncKind] = React.useState('Salário');
-  const invoiceGate = useInvoiceMonthGate();
-  const [addMode, setAddMode] = React.useState<'gasto' | 'entrada' | null>(null);
+  const [popupTab, setPopupTab] = React.useState<'gasto' | 'entrada' | null>(null);
 
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
   const typeName = (id: string) => state.paymentTypes.find(x => x.id === id)?.name || '—';
   const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
-
-  const saveGasto = () => {
-    if (!g.valid) return;
-    invoiceGate.gate(state, g.build(month), payload => { actions.addTx(payload); g.reset(); });
-  };
-  const incValid = Boolean(inc.desc.trim() && Number(inc.amount) > 0 && inc.personId);
-  const saveEntrada = () => {
-    if (!incValid) return;
-    actions.addTx({ kind: 'entrada', desc: inc.desc.trim(), amount: Number(inc.amount), categoryId: incomeCategoryId(state), typeId: inc.typeId || state.paymentTypes[0].id, personId: inc.personId, date: inc.date, incomeKind: incKind as 'Salário' | 'Extra' });
-    inc.reset();
-  };
 
   const recent = t.items.comuns.slice(0, 8);
   // Inclui o que foi guardado na caixinha no "usado" — dinheiro aportado lá
@@ -281,53 +266,17 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
           <Card>
             <CardTitle sub="o que você quer lançar?">Novo lançamento</CardTitle>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Chip active={addMode === 'gasto'} onClick={() => setAddMode(m => m === 'gasto' ? null : 'gasto')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↓ Gasto</Chip>
-              <Chip active={addMode === 'entrada'} color={green} onClick={() => setAddMode(m => m === 'entrada' ? null : 'entrada')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↑ Entrada</Chip>
+              <Chip onClick={() => setPopupTab('gasto')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↓ Gasto</Chip>
+              <Chip color={green} onClick={() => setPopupTab('entrada')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↑ Entrada</Chip>
             </div>
           </Card>
-
-          {addMode === 'gasto' && (
-            <Card>
-              <CardTitle sub="preencha e tecle Enter — entra na hora" right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <KindSwitch value={g.kind} onChange={v => g.setKind(v as TxKind)} />
-                <IconBtn onClick={() => setAddMode(null)} title="Fechar">×</IconBtn>
-              </div>}>Lançar gasto</CardTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1.8fr .9fr 1fr 1fr .9fr auto', gap: 8, alignItems: 'end' }}>
-                <Field label="descrição"><Input value={g.desc} onChange={g.setDesc} placeholder="o que foi?" onEnter={saveGasto} /></Field>
-                <Field label="valor"><MoneyInput value={g.amount} onChange={g.setAmount} onEnter={saveGasto} accent={ink} /></Field>
-                <Field label="categoria"><Select value={g.categoryId} onChange={g.setCategoryId} options={catOptions(state)} placeholder="—" /></Field>
-                <Field label="pagamento"><Select value={g.typeId} onChange={g.setTypeId} options={typeOptions(state)} placeholder="—" /></Field>
-                <Field label="quem"><Select value={g.personId} onChange={g.setPersonId} options={personOptions(state)} placeholder="—" /></Field>
-                <Button onClick={saveGasto} disabled={!g.valid} style={{ height: 38 }}>add</Button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10, marginTop: 10 }}>
-                <KindExtraFields f={g} />
-              </div>
-            </Card>
-          )}
-
-          {addMode === 'entrada' && (
-            <Card>
-              <CardTitle sub="salário, extra, freela…" right={<div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <KindSwitch value={incKind} onChange={setIncKind} options={[{ key: 'Salário', label: 'Salário' }, { key: 'Extra', label: 'Extra' }]} />
-                <IconBtn onClick={() => setAddMode(null)} title="Fechar">×</IconBtn>
-              </div>}>Lançar entrada</CardTitle>
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '2fr 1fr 1fr 1fr auto', gap: 8, alignItems: 'end' }}>
-                <Field label="descrição"><Input value={inc.desc} onChange={inc.setDesc} placeholder="de onde veio?" onEnter={saveEntrada} accent={green} /></Field>
-                <Field label="valor"><MoneyInput value={inc.amount} onChange={inc.setAmount} onEnter={saveEntrada} accent={green} /></Field>
-                <Field label="quem"><Select value={inc.personId} onChange={inc.setPersonId} options={personOptions(state)} placeholder="—" accent={green} /></Field>
-                <Field label="data"><Input type="date" value={inc.date} onChange={inc.setDate} accent={green} /></Field>
-                <Button onClick={saveEntrada} disabled={!incValid} tone={green} style={{ height: 38 }}>+ entrada</Button>
-              </div>
-            </Card>
-          )}
 
           <Card style={{ maxHeight: 380, display: 'flex', flexDirection: 'column' }}>
             <CardTitle sub={`${t.counts.comum} lançamentos avulsos em ${S.monthLabel(month).toLowerCase()}`}
               right={<Button variant="ghost" size="sm" onClick={() => onNavigate('Gastos do mês')}>ver tudo →</Button>}>Gastos comuns</CardTitle>
             <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
               {recent.length === 0 ? (
-                <EmptyState icon="🧾" title="Nenhum gasto avulso ainda" hint="Use o formulário acima para lançar o primeiro." />
+                <EmptyState icon="🧾" title="Nenhum gasto avulso ainda" hint="Clique em “Gasto” acima pra lançar o primeiro." />
               ) : recent.map((tx, i) => (
                 <Row key={tx.id} last={i === recent.length - 1} onDelete={() => actions.delTx(tx.id)}>
                   <div style={{ display: 'grid', gridTemplateColumns: '10px 1.7fr 62px 1fr 72px 64px 92px', alignItems: 'center', gap: 9, padding: '8px 26px 8px 2px', fontSize: 12.5 }}>
@@ -420,7 +369,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
         </div>
       </div>
       <FAB onClick={onOpenModal} />
-      <InvoiceMonthPrompt gate={invoiceGate} />
+      <QuickAddModal open={!!popupTab} onClose={() => setPopupTab(null)} initialTab={popupTab ?? undefined} />
     </div>
   );
 }
