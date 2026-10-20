@@ -257,6 +257,19 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const usedAmount = t.income - t.balance;
   const spentPct = t.income ? (usedAmount / t.income) * 100 : 0;
 
+  // Categorias com gasto ou com limite definido — categorias zeradas e sem
+  // limite ficam de fora pra não poluir a caixa à toa. As com limite vêm
+  // primeiro, ordenadas de quem mais estourou pra quem menos gastou do limite.
+  const catSpend = new Map(S.byCategory(state, month, personId).map(r => [r.cat.id, r.value]));
+  const catRows = state.categories
+    .map(c => ({ cat: c, value: catSpend.get(c.id) || 0 }))
+    .filter(r => r.cat.expectedAmount != null || r.value > 0);
+  const catRowsSorted = [
+    ...catRows.filter(r => r.cat.expectedAmount != null).sort((a, b) => (b.value / b.cat.expectedAmount!) - (a.value / a.cat.expectedAmount!)),
+    ...catRows.filter(r => r.cat.expectedAmount == null).sort((a, b) => b.value - a.value),
+  ];
+  const catsOver = catRowsSorted.filter(r => r.cat.expectedAmount != null && r.value > r.cat.expectedAmount!).length;
+
   return (
     <div style={{ height: isMobile ? 'auto' : '100%', minHeight: isMobile ? '100%' : undefined, display: 'flex', flexDirection: 'column', background: paper, overflow: isMobile ? 'visible' : 'hidden' }}>
       <TopBar activeTab="Lançamentos" onNavigate={onNavigate} />
@@ -268,6 +281,42 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
             <div style={{ display: 'flex', gap: 8 }}>
               <Chip onClick={() => setPopupTab('gasto')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↓ Gasto</Chip>
               <Chip color={green} onClick={() => setPopupTab('entrada')} style={{ flex: 1, justifyContent: 'center', padding: '9px 0' }}>↑ Entrada</Chip>
+            </div>
+          </Card>
+
+          <Card style={{ maxHeight: 300, display: 'flex', flexDirection: 'column' }}>
+            <CardTitle sub={catsOver > 0 ? `${catsOver} categoria${catsOver > 1 ? 's' : ''} acima do limite` : 'tudo dentro do combinado'}>Limites por categoria</CardTitle>
+            <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+              {catRowsSorted.length === 0 ? (
+                <EmptyState icon="🎯" title="Nenhum limite definido ainda" hint="Defina um limite de gasto por categoria na aba Resumo." />
+              ) : catRowsSorted.map(r => {
+                const limit = r.cat.expectedAmount;
+                const has = limit != null;
+                const pct = has ? Math.min(100, (r.value / limit) * 100) : 0;
+                const over = has && r.value > limit;
+                const color = !has ? muted : over ? red : pct > 80 ? amber : green;
+                return (
+                  <div key={r.cat.id} style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12.5, marginBottom: 3, gap: 10 }}>
+                      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 99, background: r.cat.color, display: 'inline-block', marginRight: 7 }} />{r.cat.name}
+                      </span>
+                      <span style={{ fontWeight: 700, flexShrink: 0, whiteSpace: 'nowrap' }}>
+                        <span style={{ color: over ? red : ink }}>{S.fmt0(r.value)}</span>
+                        {has && <span style={{ color: muted, fontWeight: 500 }}> / {S.fmt0(limit)}</span>}
+                      </span>
+                    </div>
+                    {has ? (
+                      <>
+                        <Bar pct={pct} color={color} height={6} />
+                        <div style={{ fontSize: 10.5, marginTop: 3, color: over ? red : green, fontWeight: 600 }}>
+                          {over ? `estourou ${S.fmt0(r.value - limit)} do limite` : `ainda pode gastar ${S.fmt0(limit - r.value)}`}
+                        </div>
+                      </>
+                    ) : <div style={{ fontSize: 10, color: muted, marginTop: 2 }}>sem limite definido</div>}
+                  </div>
+                );
+              })}
             </div>
           </Card>
 
