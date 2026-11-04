@@ -909,25 +909,6 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
             </div>
           </Card>
 
-          <Card pad={12} style={{ flexShrink: 0 }}>
-            <CardTitle sub="saldo guardado em todas as caixinhas, desde sempre">Caixinhas</CardTitle>
-            {state.caixinhas.length === 0 ? <EmptyState icon="◯" title="Nenhuma caixinha ainda" /> : <>
-              {state.caixinhas.map(c => {
-                const bal = state.caixinhaMovements.filter(m => m.caixinhaId === c.id).reduce((s, m) => s + Number(m.amount || 0), 0);
-                return (
-                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px dashed ${ink2}30`, fontSize: 12.5, fontWeight: 600 }}>
-                    <span>{c.description || 'Sem nome'}</span>
-                    <span style={{ fontWeight: 700, fontSize: 13 }}>{S.fmt(bal)}</span>
-                  </div>
-                );
-              })}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 9, marginTop: 2, borderTop: `1.5px solid ${ink}`, fontWeight: 800, fontSize: 13 }}>
-                <span>Total guardado</span>
-                <span>{S.fmt(state.caixinhaMovements.reduce((s, m) => s + Number(m.amount || 0), 0))}</span>
-              </div>
-            </>}
-          </Card>
-
           <Modal open={!!adjustFor} onClose={() => setAdjustFor(null)} title={`Ajustar saldo de ${adjustPerson?.name || ''}`} width={380}>
             <div style={{ fontSize: 12, color: muted, marginBottom: 14 }}>
               O valor abaixo substitui o saldo acumulado de {adjustPerson?.name} em {S.monthLabel(month).toLowerCase()} — os meses seguintes continuam a partir dele. Útil quando o saldo real não bate com o que foi lançado no site.
