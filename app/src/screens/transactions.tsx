@@ -212,9 +212,11 @@ export function QuickAddModal({ open, onClose, initialTab }: { open: boolean; on
             <Select value={f.categoryId} onChange={f.setCategoryId} options={catOptions(state)} placeholder="escolher…" />
           </Field>
         )}
-        <Field label="forma de pagamento" style={tab === 'entrada' ? { gridColumn: '1 / -1' } : undefined}>
-          <Select value={f.typeId} onChange={f.setTypeId} options={typeOptions(state)} placeholder="escolher…" />
-        </Field>
+        {tab === 'gasto' && (
+          <Field label="forma de pagamento">
+            <Select value={f.typeId} onChange={f.setTypeId} options={typeOptions(state)} placeholder="escolher…" />
+          </Field>
+        )}
         <Field label="quem" style={{ gridColumn: '1 / -1' }}>
           <div style={{ display: 'flex', gap: 8 }}>
             {state.people.map(p => (
@@ -454,6 +456,7 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const [catFilter, setCatFilter] = React.useState('');
   const [typeFilter, setTypeFilter] = React.useState('');
   const [personFilter, setPersonFilter] = React.useState('');
+  const [kindFilter, setKindFilter] = React.useState<'todos' | TxKind>('todos');
 
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
@@ -461,7 +464,8 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
   const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
   const invoiceInfo = (tx: Transaction) => S.cardInvoiceInfo(tx, state.paymentTypes.find(x => x.id === tx.typeId));
 
-  let list = t.items.comuns;
+  const allItems: (Transaction & { installment?: number })[] = [...t.items.comuns, ...t.items.fixos, ...t.items.parcelas];
+  let list = kindFilter === 'todos' ? allItems : allItems.filter(x => x.kind === kindFilter);
   if (q.trim()) list = list.filter(x => x.desc.toLowerCase().includes(q.toLowerCase()));
   if (catFilter) list = list.filter(x => x.categoryId === catFilter);
   if (typeFilter) list = list.filter(x => x.typeId === typeFilter);
@@ -494,7 +498,13 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
 
           <Card style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-            <CardTitle sub="somente lançamentos do tipo Comum">Lançamentos comuns</CardTitle>
+            <CardTitle sub="comuns, fixos e parcelas do mês" right={
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {([['todos', 'Todos'], ['comum', 'Comuns'], ['fixo', 'Fixos'], ['parcelamento', 'Parcelamentos']] as const).map(([k, label]) => (
+                  <Chip key={k} active={kindFilter === k} onClick={() => setKindFilter(k)}>{label}</Chip>
+                ))}
+              </div>
+            }>Lançamentos de gastos</CardTitle>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginBottom: 10 }}>
               <Input value={q} onChange={setQ} placeholder="buscar…" style={{ flex: '1 1 110px', minWidth: 100, padding: '6px 10px', fontSize: 12 }} />
               <Select value={catFilter} onChange={setCatFilter} options={catOptions(state)} placeholder="categoria" style={{ flex: '1 1 120px', minWidth: 110 }} />
@@ -512,7 +522,9 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
                     <Row key={tx.id} last={i === list.length - 1} onDelete={() => actions.delTx(tx.id)}>
                       <div style={{ display: 'grid', gridTemplateColumns: '10px 1.7fr 62px 1fr 72px 66px 96px', alignItems: 'center', gap: 9, padding: '8px 26px 8px 2px', fontSize: 12.5 }}>
                         <span style={{ width: 8, height: 8, borderRadius: 99, background: catColor(tx.categoryId) }} />
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{tx.desc}</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>
+                          {tx.desc}{tx.installment != null ? ` (${tx.installment}/${tx.totalInstallments})` : ''}
+                        </span>
                         <span style={{ color: muted, fontSize: 11 }}>{S.dayLabel(tx.date)}</span>
                         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{catName(tx.categoryId)}</span>
                         <span style={{ color: muted, fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{personName(tx.personId)}</span>
@@ -535,7 +547,7 @@ export function GastosDoMes({ onNavigate, onOpenModal }: ScreenProps) {
                 })}
             </div>
             <div style={{ borderTop: `1.5px solid ${ink}`, marginTop: 8, paddingTop: 9, display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: 14 }}>
-              <span>{list.length === t.items.comuns.length ? 'Total' : `Total filtrado (${list.length})`}</span><span>{S.fmt(listTotal)}</span>
+              <span>{list.length === allItems.length ? 'Total' : `Total filtrado (${list.length})`}</span><span>{S.fmt(listTotal)}</span>
             </div>
           </Card>
         </div>

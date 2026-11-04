@@ -723,7 +723,8 @@ export function upcoming(state: AppState, month: string, personId = 'all') {
 }
 
 // Fatura de cada cartão nesse mês — soma comuns (já contados pela fatura
-// certa) + parcelas, com o vencimento real do cartão e se já foi paga.
+// certa) + parcelas + fixos pagos no cartão, com o vencimento real do
+// cartão e se já foi paga.
 export function cardInvoices(state: AppState, month: string) {
   const { items } = totalsFor(state, month);
   return state.paymentTypes
@@ -731,10 +732,11 @@ export function cardInvoices(state: AppState, month: string) {
     .map(pt => {
       const comuns = items.comuns.filter(c => c.typeId === pt.id);
       const parcelas = items.parcelas.filter(p => p.typeId === pt.id);
-      const total = [...comuns, ...parcelas].reduce((s, x) => s + Number(x.amount || 0), 0);
+      const fixos = items.fixos.filter(f => f.typeId === pt.id);
+      const total = [...comuns, ...parcelas, ...fixos].reduce((s, x) => s + Number(x.amount || 0), 0);
       const paid = state.cardInvoicePayments.some(cp => cp.paymentTypeId === pt.id && cp.invoiceMonth === month);
       const dueDate = `${month}-${pad(Math.min(pt.due || 10, 28))}`;
-      return { type: pt, total, count: comuns.length + parcelas.length, paid, dueDate };
+      return { type: pt, total, count: comuns.length + parcelas.length + fixos.length, paid, dueDate };
     })
     .filter(c => c.total > 0 || c.paid);
 }

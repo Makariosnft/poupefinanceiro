@@ -776,6 +776,7 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const allSpend = [...t.items.comuns, ...t.items.fixos, ...t.items.parcelas];
   const topExpenses = [...allSpend].sort((a, b) => b.amount - a.amount).slice(0, 8);
   const catName = (id: string) => state.categories.find(c => c.id === id)?.name || '—';
+  const typeName = (id: string) => state.paymentTypes.find(x => x.id === id)?.name || '—';
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
   const [openTypeId, setOpenTypeId] = React.useState<string | null>(null);
   const [adjustFor, setAdjustFor] = React.useState<string | null>(null);
@@ -802,6 +803,12 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const openType = types.find(r => r.type.id === openTypeId);
   const typeBreakdown = openTypeId
     ? [...allSpend].filter(x => x.typeId === openTypeId).sort((a, b) => b.amount - a.amount)
+    : [];
+
+  const [openCatId, setOpenCatId] = React.useState<string | null>(null);
+  const openCat = cats.find(r => r.cat.id === openCatId);
+  const catBreakdown = openCatId
+    ? [...allSpend].filter(x => x.categoryId === openCatId).sort((a, b) => b.amount - a.amount)
     : [];
 
   const rows = view === 'categoria' ? cats.map(r => ({ id: r.cat.id, label: r.cat.name, color: r.cat.color, value: r.value, expected: r.cat.expectedAmount }))
@@ -844,7 +851,8 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
                 rows.map((r, i) => {
                   const over = r.expected != null && r.value > r.expected;
                   return (
-                    <div key={i} style={{ marginBottom: 10 }}>
+                    <div key={i} onClick={view === 'categoria' ? () => setOpenCatId(r.id) : undefined}
+                      style={{ marginBottom: 10, cursor: view === 'categoria' ? 'pointer' : 'default' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', fontSize: 12.5, marginBottom: 3, gap: 10 }}>
                         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                           <span style={{ width: 8, height: 8, borderRadius: 99, background: r.color, display: 'inline-block', marginRight: 7 }} />{r.label}
@@ -852,14 +860,6 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
                         </span>
                         <span style={{ display: 'flex', gap: 8, flexShrink: 0, alignItems: 'center' }}>
                           <span style={{ color: muted, fontSize: 11 }}>{Math.round((r.value / rowsTotal) * 100)}%</span>
-                          {view === 'categoria' && (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
-                              <span style={{ fontSize: 9, color: muted }}>meta</span>
-                              <input type="number" min={0} step="0.01" value={r.expected ?? ''} placeholder="—"
-                                onChange={e => actions.updateCategory(r.id, { expectedAmount: e.target.value ? Number(e.target.value) : undefined })}
-                                style={{ width: 56, padding: '2px 4px', borderRadius: 5, border: `1px solid ${ink2}55`, background: paper, fontSize: 10.5, fontWeight: 700, color: ink }} />
-                            </span>
-                          )}
                           <span style={{ fontWeight: 700, color: over ? red : ink }}>{S.fmt(r.value)}</span>
                         </span>
                       </div>
@@ -907,6 +907,25 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
               <span>Total da casa</span>
               <span style={{ color: S.cumulativeBalance(state, month) >= 0 ? green : red }}>{S.fmt(S.cumulativeBalance(state, month))}</span>
             </div>
+          </Card>
+
+          <Card pad={12} style={{ flexShrink: 0 }}>
+            <CardTitle sub="saldo guardado em todas as caixinhas, desde sempre">Caixinhas</CardTitle>
+            {state.caixinhas.length === 0 ? <EmptyState icon="◯" title="Nenhuma caixinha ainda" /> : <>
+              {state.caixinhas.map(c => {
+                const bal = state.caixinhaMovements.filter(m => m.caixinhaId === c.id).reduce((s, m) => s + Number(m.amount || 0), 0);
+                return (
+                  <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px dashed ${ink2}30`, fontSize: 12.5, fontWeight: 600 }}>
+                    <span>{c.description || 'Sem nome'}</span>
+                    <span style={{ fontWeight: 700, fontSize: 13 }}>{S.fmt(bal)}</span>
+                  </div>
+                );
+              })}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 9, marginTop: 2, borderTop: `1.5px solid ${ink}`, fontWeight: 800, fontSize: 13 }}>
+                <span>Total guardado</span>
+                <span>{S.fmt(state.caixinhaMovements.reduce((s, m) => s + Number(m.amount || 0), 0))}</span>
+              </div>
+            </>}
           </Card>
 
           <Modal open={!!adjustFor} onClose={() => setAdjustFor(null)} title={`Ajustar saldo de ${adjustPerson?.name || ''}`} width={380}>
@@ -963,6 +982,41 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
                           <span style={{ fontSize: 10.5, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{catName(x.categoryId)}</span>
+                          <span style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>{S.fmt(x.amount)}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </Modal>
+
+          <Modal open={!!openCatId} onClose={() => setOpenCatId(null)} title={openCat ? openCat.cat.name : ''} width={Math.min(880, 210 * Math.max(1, state.people.length) + 60)}>
+            <div style={{ fontSize: 11.5, color: muted, marginBottom: 14 }}>
+              {S.monthLabel(month)} · {catBreakdown.length} lançamentos · total <b>{openCat ? S.fmt(openCat.value) : ''}</b>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, maxHeight: 420, overflow: 'auto' }}>
+              {state.people.map(p => {
+                const items = catBreakdown.filter(x => x.personId === p.id);
+                const subtotal = items.reduce((s, x) => s + Number(x.amount || 0), 0);
+                return (
+                  <div key={p.id} style={{ flex: '1 1 190px', minWidth: 180 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, paddingBottom: 6, borderBottom: `1.5px solid ${ink}` }}>
+                      <span style={{ fontWeight: 700, fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 99, background: p.color, flexShrink: 0 }} />{p.name}
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: 12.5 }}>{S.fmt(subtotal)}</span>
+                    </div>
+                    {items.length === 0 ? (
+                      <div style={{ fontSize: 11.5, color: muted }}>Nenhum lançamento</div>
+                    ) : items.map((x, i) => (
+                      <div key={x.id + i} style={{ padding: '6px 0', borderBottom: i === items.length - 1 ? 'none' : `1px dashed ${ink2}30` }}>
+                        <div style={{ fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {x.desc}{'installment' in x ? ` (${x.installment}/${x.totalInstallments})` : ''}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+                          <span style={{ fontSize: 10.5, color: muted, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{typeName(x.typeId)}</span>
                           <span style={{ fontWeight: 700, fontSize: 12, whiteSpace: 'nowrap' }}>{S.fmt(x.amount)}</span>
                         </div>
                       </div>
