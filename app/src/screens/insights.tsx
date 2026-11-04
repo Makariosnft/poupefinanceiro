@@ -780,6 +780,8 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
   const catColor = (id: string) => state.categories.find(c => c.id === id)?.color || muted;
   const [openTypeId, setOpenTypeId] = React.useState<string | null>(null);
   const [adjustFor, setAdjustFor] = React.useState<string | null>(null);
+  const [traceFor, setTraceFor] = React.useState<'all' | string | null>(null);
+  const tracePeople = traceFor === 'all' ? state.people : state.people.filter(p => p.id === traceFor);
   const [adjAmount, setAdjAmount] = React.useState('');
   const [adjNote, setAdjNote] = React.useState('');
   const adjustPerson = state.people.find(p => p.id === adjustFor);
@@ -888,22 +890,22 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
           </Card>
 
           <Card pad={12} style={{ flexShrink: 0 }}>
-            <CardTitle sub="entradas menos gastos, acumulado desde o início">Saldo acumulado</CardTitle>
+            <CardTitle sub="quanto sobrou (ou faltou) desde que você começou a usar o app — clique pra ver o extrato">Saldo acumulado</CardTitle>
             {state.people.map(p => {
               const bal = S.cumulativeBalance(state, month, p.id);
               return (
-                <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px dashed ${ink2}30` }}>
+                <div key={p.id} onClick={() => setTraceFor(p.id)} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '7px 0', borderBottom: `1px dashed ${ink2}30`, cursor: 'pointer' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, fontWeight: 600 }}>
                     <span style={{ width: 8, height: 8, borderRadius: 99, background: p.color, flexShrink: 0 }} />{p.name}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     <span style={{ fontWeight: 700, fontSize: 13, color: bal >= 0 ? green : red }}>{S.fmt(bal)}</span>
-                    <IconBtn onClick={() => openAdjust(p.id, bal)} title={`Ajustar saldo de ${p.name}`} size={22}>✎</IconBtn>
+                    <IconBtn onClick={e => { e.stopPropagation(); openAdjust(p.id, bal); }} title={`Ajustar saldo de ${p.name}`} size={22}>✎</IconBtn>
                   </div>
                 </div>
               );
             })}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 9, marginTop: 2, borderTop: `1.5px solid ${ink}`, fontWeight: 800, fontSize: 13 }}>
+            <div onClick={() => setTraceFor('all')} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 9, marginTop: 2, borderTop: `1.5px solid ${ink}`, fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
               <span>Total da casa</span>
               <span style={{ color: S.cumulativeBalance(state, month) >= 0 ? green : red }}>{S.fmt(S.cumulativeBalance(state, month))}</span>
             </div>
@@ -922,6 +924,43 @@ export function Relatorios({ onNavigate, onOpenModal }: ScreenProps) {
               </Field>
               <Button onClick={saveAdjustment} disabled={adjAmount.trim() === ''}>Salvar</Button>
               {hasOverrideThisMonth && <Button variant="ghost" tone={red} onClick={clearAdjustment}>Remover ajuste — voltar ao automático</Button>}
+            </div>
+          </Modal>
+
+          <Modal open={!!traceFor} onClose={() => setTraceFor(null)} title={traceFor === 'all' ? 'Extrato do saldo acumulado — total da casa' : `Extrato do saldo acumulado — ${tracePeople[0]?.name || ''}`}
+            width={Math.min(880, 230 * Math.max(1, tracePeople.length) + 60)}>
+            <div style={{ fontSize: 11.5, color: muted, marginBottom: 14 }}>
+              Mês a mês, desde o primeiro lançamento — "ajuste" é quando alguém corrigiu manualmente o valor pra bater com a conta real.
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, maxHeight: 440, overflow: 'auto' }}>
+              {tracePeople.map(p => {
+                const trace = S.cumulativeBalanceTrace(state, month, p.id);
+                return (
+                  <div key={p.id} style={{ flex: '1 1 210px', minWidth: 200 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8, paddingBottom: 6, borderBottom: `1.5px solid ${ink}` }}>
+                      <span style={{ fontWeight: 700, fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ width: 8, height: 8, borderRadius: 99, background: p.color, flexShrink: 0 }} />{p.name}
+                      </span>
+                      <span style={{ fontWeight: 700, fontSize: 12.5 }}>{S.fmt(trace[trace.length - 1]?.runningTotal ?? 0)}</span>
+                    </div>
+                    {trace.length === 0 ? (
+                      <div style={{ fontSize: 11.5, color: muted }}>Sem histórico ainda</div>
+                    ) : [...trace].reverse().map(s => (
+                      <div key={s.month} style={{ padding: '6px 0', borderBottom: `1px dashed ${ink2}30` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                          <span style={{ fontWeight: 600 }}>{S.monthLabel(s.month)}</span>
+                          <span style={{ fontWeight: 700 }}>{S.fmt(s.runningTotal)}</span>
+                        </div>
+                        <div style={{ fontSize: 10.5, color: muted, marginTop: 1 }}>
+                          {s.override != null
+                            ? <span style={{ color: amber }}>ajuste manual pra {S.fmt(s.override)}</span>
+                            : <span style={{ color: s.monthBalance >= 0 ? green : red }}>{s.monthBalance >= 0 ? '+' : ''}{S.fmt(s.monthBalance)} nesse mês</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
             </div>
           </Modal>
 

@@ -763,6 +763,31 @@ export function cumulativeBalance(state: AppState, month: string, personId = 'al
   return state.people.reduce((s, p) => s + personCumulativeBalance(state, month, p.id), 0);
 }
 
+export interface CumulativeBalanceStep {
+  month: string;
+  monthBalance: number; // entradas - gastos daquele mês
+  override: number | null; // se teve ajuste manual nesse mês, o valor que foi colocado
+  runningTotal: number; // acumulado logo depois desse mês
+}
+
+// Extrato mês a mês de como o saldo acumulado de uma pessoa chegou no valor
+// atual — pra não ser uma caixa-preta, dá pra ver exatamente de onde veio.
+export function cumulativeBalanceTrace(state: AppState, month: string, personId: string): CumulativeBalanceStep[] {
+  const start = accountStartMonth(state);
+  if (!start) return [];
+  const steps: CumulativeBalanceStep[] = [];
+  let total = 0;
+  let m = start;
+  while (monthDiff(m, month) >= 0) {
+    const override = state.balanceAdjustments.find(a => a.month === m && a.personId === personId);
+    const monthBalance = totalsFor(state, m, personId).balance;
+    total = override ? Number(override.amount) : total + monthBalance;
+    steps.push({ month: m, monthBalance, override: override ? Number(override.amount) : null, runningTotal: total });
+    m = addMonths(m, 1);
+  }
+  return steps;
+}
+
 export function healthScore(state: AppState, month: string) {
   const t = totalsFor(state, month);
   const prev = totalsFor(state, addMonths(month, -1));
