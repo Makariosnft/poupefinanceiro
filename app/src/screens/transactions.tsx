@@ -255,10 +255,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
   const personName = (id: string) => state.people.find(p => p.id === id)?.name || '—';
 
   const recent = t.items.comuns.slice(0, 4);
-  // Inclui o que foi guardado na caixinha no "usado" — dinheiro aportado lá
-  // também deixou de estar livre pra gastar, mesmo não sendo um gasto.
-  const usedAmount = t.income - t.balance;
-  const spentPct = t.income ? (usedAmount / t.income) * 100 : 0;
+  const spentPct = t.income ? (t.expenses / t.income) * 100 : 0;
 
   // Categorias com gasto ou com limite definido — categorias zeradas e sem
   // limite ficam de fora pra não poluir a caixa à toa. As com limite vêm
@@ -379,7 +376,7 @@ export function Lancamentos({ onNavigate, onOpenModal }: ScreenProps) {
             </div>
             <div style={{ marginTop: 12 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: muted, marginBottom: 4 }}>
-                <span>usado da renda</span><span>{S.fmt0(usedAmount)} / {S.fmt0(t.income)}</span>
+                <span>usado da renda</span><span>{S.fmt0(t.expenses)} / {S.fmt0(t.income)}</span>
               </div>
               <Bar pct={spentPct} color={spentPct > 90 ? red : spentPct > 70 ? amber : green} />
               <div style={{ fontSize: 10.5, color: muted, marginTop: 6 }}>
